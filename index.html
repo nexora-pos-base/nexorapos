@@ -156,6 +156,17 @@ textarea.inp{min-height:70px;resize:vertical}
 .prod span{font-size:14px;color:var(--ink2);font-weight:650;margin-top:auto;font-variant-numeric:tabular-nums}
 .prod{position:relative}
 .prod .pq{position:absolute;bottom:10px;right:10px;background:var(--warn);color:#fff;border-radius:99px;font-style:normal;font-size:12px;font-weight:800;min-width:22px;height:22px;line-height:22px;text-align:center;padding:0 6px}
+.prod .ag{font-style:normal;font-size:11px;font-weight:750;color:#b01c1c;background:var(--bad2);border-radius:6px;padding:2px 6px;align-self:flex-start}
+.prod .ag.low{color:#9a5b00;background:var(--warn2)}
+.stk{font-weight:750;font-variant-numeric:tabular-nums}
+.stk.bad{color:var(--bad)}.stk.warn{color:#b26a00}
+.imp-prev{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.imp-prev .tbl td,.imp-prev .tbl th{padding:7px 10px;font-size:13px}
+.vcaja{border-radius:12px;padding:10px 12px;font-size:13.5px;display:flex;flex-direction:column;gap:2px}
+.vcaja.ok{background:var(--ok2);color:#0f5f2c;flex-direction:row;justify-content:space-between;align-items:center}
+.vcaja.bad{background:var(--bad2);color:#8f1b1b}
+.medbtns{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.medbtns .btn{min-height:50px}
 .lnk{color:var(--accent);font-weight:650;font-size:12.5px;padding:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
 .chips button{padding:7px 11px;border-radius:99px;background:var(--bg);font-size:13px;font-weight:600}
@@ -420,6 +431,8 @@ const PERMS = [
   ['caja', 'Caja: abrir, cerrar y movimientos'],
   ['ventas', 'Ver ventas y reportes'],
   ['anularVenta', 'Anular ventas cerradas'],
+  ['inventario', 'Inventario: stock, entradas y conteos'],
+  ['costos', 'Ver costos y ganancias'],
   ['productos', 'Gestionar productos y categorías'],
   ['ajustes', 'Ajustes, usuarios y plano de mesas'],
 ];
@@ -537,6 +550,14 @@ const DB = (() => {
         if (cached) { const patch = fn(cached); if (patch) F.updateDoc(ref(col, id), patch).catch(fail(col)); }
       });
     },
+    /* suma o resta a un número de forma atómica (stock) */
+    inc(col, id, field, n) {
+      if (mode === 'local') {
+        const d = (store[col] || {})[id]; if (!d) return;
+        store[col][id] = { ...d, [field]: (Number(d[field]) || 0) + n }; saveLocal(); notify(col); return;
+      }
+      F.updateDoc(ref(col, id), { [field]: F.increment(n) }).catch(fail(col));
+    },
     del(col, id) {
       if (mode === 'local') { if (store[col]) { delete store[col][id]; saveLocal(); notify(col); } return; }
       F.deleteDoc(ref(col, id)).catch(fail(col));
@@ -634,11 +655,13 @@ async function buildSeed(nombre, adminPin, demo, ejemplos = true) {
 
 /* ---------------- íconos ---------------- */
 const IC = {
+  vender: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.2L21 7.5H6.4"/></svg>',
   salon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   pedidos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
   cocina: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 0 1-8 0C8 9 10 8 10 5.5"/><path d="M5 21h14"/></svg>',
   caja: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.6"/><path d="M6 9.5v.01M18 15.5v.01"/></svg>',
   ventas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  inventario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>',
   productos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9z"/><circle cx="8" cy="8" r="1.5"/></svg>',
   ajustes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
@@ -681,6 +704,7 @@ const medios = () => (S.cfg.medios && S.cfg.medios.length ? S.cfg.medios : ['Efe
 function tituloVenta(v) {
   if (!v) return '';
   if (v.tipo === 'mesa') { const m = gMesa(v.mesaId); return 'Mesa ' + (m ? m.nombre : '?'); }
+  if (v.rapida) return 'Venta #' + (v.numero || '');
   return (v.tipo === 'domicilio' ? 'Domicilio' : 'Mostrador') + ' #' + (v.numero || '');
 }
 
@@ -956,12 +980,13 @@ function pinHTML() {
   </div></div>`;
 }
 
-const NAV = [['salon', 'Salón'], ['pedidos', 'Pedidos'], ['cocina', 'Cocina'], ['caja', 'Caja'], ['ventas', 'Ventas'], ['productos', 'Productos'], ['ajustes', 'Ajustes']];
+const NAV = [['vender', 'Vender'], ['salon', 'Salón'], ['pedidos', 'Pedidos'], ['cocina', 'Cocina'], ['caja', 'Caja'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['productos', 'Productos'], ['ajustes', 'Ajustes']];
 function canView(k) {
   if (k === 'pedido') return perm('salon') || perm('pedidos');
+  if (k === 'vender') return perm('cobrar');
   return NAV.some(n => n[0] === k) && perm(k);
 }
-function defaultView() { const n = NAV.find(([k]) => perm(k)); return n ? n[0] : 'none'; }
+function defaultView() { const n = NAV.find(([k]) => canView(k)); return n ? n[0] : 'none'; }
 function activePedidos() {
   return ventas().filter(v => v.tipo !== 'mesa' && v.estado !== 'anulada' && v.etapa !== 'entregado' && (v.estado === 'abierta' || v.abiertaEn >= S.dayStart));
 }
@@ -972,7 +997,7 @@ function appHTML() {
     pedidos: activePedidos().length,
     cocina: S.comandas.filter(c => c.estado === 'pendiente').length,
   };
-  const items = NAV.filter(([k]) => perm(k)).map(([k, l]) => `<button class="nb ${navOn === k ? 'on' : ''}" data-act="nav" data-v="${k}">${IC[k]}<span>${l}</span>${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('');
+  const items = NAV.filter(([k]) => canView(k)).map(([k, l]) => `<button class="nb ${navOn === k ? 'on' : ''}" data-act="nav" data-v="${k}">${IC[k]}<span>${l}</span>${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('');
   return `<div id="app"><nav class="nav"><div class="brand">${LOGO}<span>NEXORA</span></div>${items}<div class="sp"></div></nav><main data-sk="main">${viewHTML()}</main></div>`;
 }
 
@@ -985,6 +1010,7 @@ function topHTML(title, extra = '', back = '') {
 function viewHTML() {
   if (!canView(S.view)) { const d = defaultView(); if (d !== 'none' && d !== S.view) S.view = d; }
   switch (S.view) {
+    case 'vender': return vVender();
     case 'salon': return vSalon();
     case 'pedido': return vPedido();
     case 'pedidos': return vPedidos();
@@ -992,6 +1018,7 @@ function viewHTML() {
     case 'caja': return vCaja();
     case 'ventas': return vVentas();
     case 'productos': return vProductos();
+    case 'inventario': return vInventario();
     case 'ajustes': return vAjustes();
   }
   return topHTML('Sin acceso') + '<div class="wrap"><div class="card empty">Tu usuario no tiene módulos asignados. Pide al administrador que revise tus permisos.</div></div>';
@@ -1232,7 +1259,7 @@ function vPedido() {
   const left = editable ? `<div class="pv-left" data-sk="pl">
       <input class="inp" id="psearch" data-in="q" placeholder="Buscar producto…" value="${esc(S.q)}" autocomplete="off">
       <div class="cats"><button class="${S.catId === 'all' ? 'on' : ''}" data-act="cat" data-id="all">Todo</button>${S.categorias.map(ct => `<button class="${S.catId === ct.id ? 'on' : ''}" data-act="cat" data-id="${ct.id}"><i style="background:${ct.color}"></i>${esc(ct.nombre)}</button>`).join('')}</div>
-      <div class="prods">${prods.map(p => `<button class="prod" style="--c:${(gCat(p.categoriaId) || {}).color || '#cbd5e1'}" data-act="addProd" data-id="${p.id}"><b>${esc(p.nombre)}</b><span>${money(p.precio)}</span>${dq[p.id] ? `<em class="pq">${dq[p.id]}</em>` : ''}</button>`).join('') || '<div class="empty">No hay productos' + (S.productos.length ? ' con ese filtro' : '. Créalos en el módulo Productos') + '</div>'}</div>
+      <div class="prods">${prods.map(p => `<button class="prod" style="--c:${(gCat(p.categoriaId) || {}).color || '#cbd5e1'}" data-act="addProd" data-id="${p.id}"><b>${esc(p.nombre)}</b>${p.controlStock && (Number(p.stock) || 0) <= 0 ? '<i class="ag">Agotado</i>' : (p.controlStock && p.stockMin && p.stock <= p.stockMin ? `<i class="ag low">Quedan ${num(p.stock)}</i>` : '')}<span>${money(p.precio)}</span>${dq[p.id] ? `<em class="pq">${dq[p.id]}</em>` : ''}</button>`).join('') || '<div class="empty">No hay productos' + (S.productos.length ? ' con ese filtro' : '. Créalos en el módulo Productos') + '</div>'}</div>
     </div>` : `<div class="pv-left"><div class="card empty">${v.estado === 'cerrada' ? 'Esta venta ya fue cobrada.' : 'Esta venta fue anulada.'}<br><br><button class="btn" data-act="backPedido">Volver</button></div></div>`;
 
   const right = `<div class="pv-right">
@@ -1264,7 +1291,7 @@ A.addProd = el => {
   const d = S.drafts[v.id] = S.drafts[v.id] || [];
   const ex = d.find(i => i.productoId === p.id && !i.nota);
   if (ex) ex.cant++;
-  else d.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, cant: 1, nota: '', cocina: p.cocina !== false });
+  else d.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: '', cocina: p.cocina !== false });
   saveDrafts(); render();
 };
 A.dq = el => {
@@ -1290,6 +1317,13 @@ A.saveNota = () => {
   closeModal(); render();
 };
 
+/* inventario: mueve el stock de los productos que lo controlan */
+function moverStock(items, signo) {
+  const porProd = {};
+  (items || []).forEach(i => { if (i.estado !== 'anulado') porProd[i.productoId] = (porProd[i.productoId] || 0) + i.cant; });
+  Object.entries(porProd).forEach(([pid, n]) => { const p = gProd(pid); if (p && p.controlStock) DB.inc('productos', pid, 'stock', signo * n); });
+}
+
 /* envía lo pendiente: confirma productos y crea la comanda de cocina */
 function enviarDraft(v, silent = false) {
   const draft = S.drafts[v.id] || [];
@@ -1297,6 +1331,7 @@ function enviarDraft(v, silent = false) {
   const t = now();
   const items = draft.map(i => ({ ...i, id: uid(), estado: 'enviado', enviadoEn: t, por: S.user.nombre }));
   DB.append('ventas', v.id, 'items', items, v.tipo === 'mesa' ? { precuentaEn: null } : {});
+  moverStock(items, -1);
   const coc = items.filter(i => i.cocina);
   if (coc.length) {
     DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: v.meseroNombre || (v.cliente && v.cliente.nombre) || '', items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
@@ -1333,6 +1368,7 @@ A.confAnular = () => {
     });
     return { items };
   }, v);
+  if (it) moverStock([{ ...it, cant: Math.min(cant, it.cant), estado: 'enviado' }], +1);
   if (it && it.cocina) DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: S.user.nombre, items: [{ nombre: it.nombre, cant, nota: 'Motivo: ' + motivo }], estado: 'pendiente', anulacion: true, creadaEn: now() });
   closeModal(); toast('Producto anulado');
 };
@@ -1408,6 +1444,7 @@ A.anularVentaAbierta = () => {
 A.confAnularVenta = () => {
   const m = $('#av_m').value.trim(); if (!m) return toast('Escribe el motivo', 'err');
   const v = gVenta(S.ventaId); delete S.drafts[v.id]; saveDrafts();
+  moverStock(v.items, +1);
   DB.update('ventas', v.id, { estado: 'anulada', anuladaMotivo: m, anuladaPor: S.user.nombre, cerradaEn: now() });
   closeModal(); toast('Cuenta anulada'); A.backPedido();
 };
@@ -1438,9 +1475,9 @@ A.cobrar = () => {
 };
 A.irCaja = () => { closeModal(); S.view = 'caja'; render(); };
 const payTotal = () => PAY.c.total + (PAY.propinaOn ? PAY.propina : 0);
-function payHTML(v) {
+function payHTML(v, titulo) {
   const c = PAY.c;
-  return `${mHead('Cobrar · ' + esc(tituloVenta(v)))}<div class="mb">
+  return `${mHead(titulo || ('Cobrar · ' + esc(tituloVenta(v))))}<div class="mb">
     <div class="card pad" style="box-shadow:none;margin-bottom:14px">
       <div class="tot"><span>Subtotal</span><span>${money(c.subtotal)}</span></div>
       ${c.desc ? `<div class="tot"><span>Descuento</span><span>− ${money(c.desc)}</span></div>` : ''}
@@ -1454,6 +1491,7 @@ function payHTML(v) {
     <label style="font-size:13px;font-weight:650;color:var(--ink2)">Medio de pago</label>
     <div class="medios">${medios().map(m => `<button data-act="payAdd" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     <div id="pay_rows">${payRowsHTML()}</div>
+    <div class="chips" id="pay_bills"></div>
     <div class="paysum" id="pay_stat"></div>
     <label class="chk" style="margin-top:8px"><input type="checkbox" id="pay_pr" ${PAY.imprimir ? 'checked' : ''}> Imprimir comprobante</label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn ok lg" id="pay_ok" data-act="payConfirm" data-primary>Confirmar pago</button></div>`;
@@ -1475,6 +1513,12 @@ function payRefresh() {
   el.className = 'paysum ' + st.cls; el.innerHTML = `<span>${st.txt[0]}</span><span>${st.txt[1]}</span>`;
   $('#pay_tot').textContent = money(payTotal());
   $('#pay_ok').disabled = !st.ok;
+  const bl = $('#pay_bills');
+  if (bl) {
+    const ef = PAY.pagos.findIndex(p => p.medio === 'Efectivo');
+    const resto = payTotal() - sum(PAY.pagos.filter(p => p.medio !== 'Efectivo'), p => p.monto);
+    bl.innerHTML = ef < 0 ? '' : `<span class="small muted" style="align-self:center">El cliente paga con:</span>` + [resto, 10000, 20000, 50000, 100000].filter((b, i) => i === 0 || b > resto).filter((b, i, a) => a.indexOf(b) === i).map((b, i) => `<button data-act="payBill" data-v="${b}">${i === 0 ? 'Exacto' : money(b)}</button>`).join('');
+  }
 }
 A.payAdd = el => {
   const rest = Math.max(0, payTotal() - sum(PAY.pagos, p => p.monto));
@@ -1484,9 +1528,14 @@ A.payAdd = el => {
   const idx = PAY.pagos.findIndex(p => p.medio === el.dataset.m);
   const inp = $('#pay_r' + idx); if (inp) { inp.focus(); inp.select(); }
 };
+A.payBill = el => {
+  const ef = PAY.pagos.find(p => p.medio === 'Efectivo'); if (!ef) return;
+  ef.monto = +el.dataset.v; $('#pay_rows').innerHTML = payRowsHTML(); payRefresh();
+};
 A.payDel = el => { PAY.pagos.splice(+el.dataset.i, 1); $('#pay_rows').innerHTML = payRowsHTML(); payRefresh(); };
 A.payConfirm = () => {
   const st = payState(); if (!st.ok) return;
+  if (PAY.cart) { vFinalizar(st); return; }
   const v = gVenta(PAY.vid); if (!v) return;
   const nuevos = enviarDraft(v, true);
   const cambio = st.cambio || 0;
@@ -1631,32 +1680,41 @@ function vCaja() {
 
   if (!S.arqueo) {
     return topHTML('Caja', '<span class="tag bad">Cerrada</span>') + `<div class="wrap">
-      <div class="card pad" style="max-width:460px">
-        <h3 class="sec-t">Abrir caja</h3><p class="muted small" style="margin-bottom:12px">Cuenta el efectivo con el que arranca el turno (la base).</p>
+      <div class="card pad" style="max-width:480px">
+        <h3 class="sec-t">Abrir la caja del turno</h3><p class="muted small" style="margin-bottom:12px">Cuenta el efectivo con el que arranca el turno (la base) y escríbelo aquí. Después vende desde <b>Vender</b>.</p>
         <div class="field"><label>Base en efectivo</label><input class="inp money" id="cj_base" data-keep inputmode="numeric" placeholder="$ 0"></div>
         ${perm('caja') ? '<button class="btn pri lg block" data-act="abrirCaja">Abrir caja</button>' : '<p class="muted">No tienes permiso para abrir la caja.</p>'}
       </div>${histHTML}</div>`;
   }
   const a = S.arqueo, k = cajaCalc();
   const abiertas = ventasAbiertas().length;
-  return topHTML('Caja', `<span class="tag ok">Abierta</span><span class="tag">desde ${hhmm(a.abiertoEn)} · ${esc(a.abiertoPor)}</span>`) + `<div class="wrap">
+  const electro = k.ms.filter(m => m !== 'Efectivo');
+  const totElec = sum(electro, m => k.sistema[m]);
+  const salidas = S.movs.filter(m => m.tipo === 'egreso'), entradas = S.movs.filter(m => m.tipo === 'ingreso');
+  const vs = k.vs.slice().sort((x, y) => (y.cerradaEn || 0) - (x.cerradaEn || 0));
+  const resumen = v => { const t = (v.items || []).filter(i => i.estado !== 'anulado').map(i => i.cant + ' ' + i.nombre).join(', '); return t.length > 60 ? t.slice(0, 58) + '…' : t; };
+  return topHTML('Caja', `<span class="tag ok">Abierta desde ${hhmm(a.abiertoEn)}</span>`) + `<div class="wrap">
+    <div class="row wrap" style="margin-bottom:16px">
+      ${canView('vender') ? '<button class="btn pri lg" data-act="nav" data-v="vender">Ir a vender</button>' : ''}
+      ${perm('caja') ? '<button class="btn lg" data-act="mov" data-t="egreso">Salida de dinero</button><button class="btn lg" data-act="mov" data-t="ingreso">Entrada de dinero</button><div style="flex:1"></div><button class="btn bad lg" data-act="cerrarCaja">Cerrar caja</button>' : ''}
+    </div>
     <div class="kpis">
-      <div class="card kpi"><div class="l">Ventas del turno</div><div class="v">${money(k.ventasTotal)}</div><div class="muted small">${k.vs.length} cuentas cerradas</div></div>
-      <div class="card kpi"><div class="l">Efectivo en caja</div><div class="v">${money(k.sistema.Efectivo)}</div><div class="muted small">incluye base de ${money(a.base)}</div></div>
-      <div class="card kpi"><div class="l">Propinas</div><div class="v">${money(k.propinas)}</div><div class="muted small">para el personal</div></div>
-      <div class="card kpi"><div class="l">Cuentas abiertas</div><div class="v">${abiertas}</div><div class="muted small">mesas y pedidos sin cobrar</div></div>
+      <div class="card kpi"><div class="l">Vendido en este turno</div><div class="v">${money(k.ventasTotal + k.propinas)}</div><div class="muted small">${vs.length} ${vs.length === 1 ? 'venta' : 'ventas'}${k.propinas ? ' · incluye ' + money(k.propinas) + ' de propinas' : ''}</div></div>
+      <div class="card kpi"><div class="l">Debe haber en efectivo</div><div class="v">${money(k.sistema.Efectivo)}</div><div class="muted small">base ${money(a.base)} + ventas ${money(k.porMedio.Efectivo || 0)}${k.movM.Efectivo ? (k.movM.Efectivo > 0 ? ' + entradas ' : ' − salidas ') + money(Math.abs(k.movM.Efectivo)) : ''}</div></div>
+      <div class="card kpi"><div class="l">Pagos electrónicos</div><div class="v">${money(totElec)}</div><div class="muted small">${electro.filter(m => k.sistema[m]).map(m => esc(m) + ' ' + money(k.sistema[m])).join(' · ') || 'Nequi, tarjeta, transferencias…'}</div></div>
     </div>
-    <div class="grid2" style="align-items:start">
-      <div class="card pad"><h3 class="sec-t">Por medio de pago</h3>
-        ${k.ms.map(m => `<div class="list-row"><span>${esc(m)}${m === 'Efectivo' ? `<div class="muted small">Base ${money(a.base)} + ventas ${money(k.porMedio.Efectivo || 0)}${k.movM.Efectivo ? ' ' + (k.movM.Efectivo > 0 ? '+ ' : '− ') + money(Math.abs(k.movM.Efectivo)) + ' mov.' : ''}</div>` : ''}</span><b>${money(k.sistema[m])}</b></div>`).join('')}
-        <div class="list-row" style="font-weight:800"><span>Total</span><span>${money(sum(Object.values(k.sistema)))}</span></div>
+    ${abiertas ? `<div class="lic-bar warn" style="border-radius:12px;margin-bottom:16px;text-align:left">Hay ${abiertas} ${abiertas === 1 ? 'cuenta abierta' : 'cuentas abiertas'} sin cobrar (mesas o pedidos). Cóbralas antes de cerrar la caja.</div>` : ''}
+    <div class="grid2" style="align-items:start;grid-template-columns:2fr 1fr">
+      <div class="card" style="overflow:auto"><div class="pad" style="padding-bottom:4px"><h3 class="sec-t" style="margin:0">Ventas de este turno</h3></div>
+        ${vs.length ? `<table class="tbl"><thead><tr><th>Hora</th><th>Venta</th><th>Productos</th><th>Pago</th><th class="num">Total</th></tr></thead><tbody>
+        ${vs.slice(0, 40).map(v => `<tr class="click" data-act="verVenta" data-id="${v.id}"><td>${hhmm(v.cerradaEn)}</td><td><b>${esc(tituloVenta(v))}</b></td><td class="small">${esc(resumen(v))}</td><td class="small">${esc((v.pagos || []).map(p => p.medio).join(', '))}</td><td class="num"><b>${money((v.total || 0) + (v.propina || 0))}</b></td></tr>`).join('')}
+        </tbody></table>${vs.length > 40 ? '<p class="muted small pad">Las demás están en Ventas.</p>' : ''}` : '<div class="empty">Todavía no hay ventas en este turno.</div>'}
       </div>
-      <div class="card pad"><div class="row between" style="margin-bottom:8px"><h3 class="sec-t" style="margin:0">Movimientos</h3>
-        ${perm('caja') ? '<div class="row"><button class="btn sm" data-act="mov" data-t="ingreso">+ Ingreso</button><button class="btn sm" data-act="mov" data-t="egreso">− Egreso</button></div>' : ''}</div>
-        ${S.movs.length ? S.movs.map(m => `<div class="list-row"><span><b>${esc(m.concepto)}</b><div class="muted small">${hhmm(m.fecha)} · ${esc(m.medio)} · ${esc(m.usuario)}</div></span><span class="row"><b style="color:${m.tipo === 'ingreso' ? 'var(--ok)' : 'var(--bad)'}">${m.tipo === 'ingreso' ? '+' : '−'} ${money(m.monto)}</b>${perm('caja') ? `<button class="rm" data-act="delMov" data-id="${m.id}">×</button>` : ''}</span></div>`).join('') : '<p class="muted small">Sin movimientos. Registra aquí pagos a proveedores, compras o retiros de efectivo.</p>'}
+      <div class="card pad"><h3 class="sec-t">Salidas y entradas de dinero</h3>
+        ${S.movs.length ? S.movs.map(m => `<div class="list-row"><span><b>${esc(m.concepto)}</b><div class="muted small">${hhmm(m.fecha)} · ${esc(m.medio)} · ${esc(m.usuario)}</div></span><span class="row"><b style="color:${m.tipo === 'ingreso' ? 'var(--ok)' : 'var(--bad)'}">${m.tipo === 'ingreso' ? '+' : '−'} ${money(m.monto)}</b>${perm('caja') ? `<button class="rm" data-act="delMov" data-id="${m.id}">×</button>` : ''}</span></div>`).join('') : '<p class="muted small">Registra aquí lo que sale de la caja (pago del hielo, un proveedor, un adelanto) o lo que entra que no es venta (más sencillo).</p>'}
+        ${salidas.length || entradas.length ? `<div class="list-row" style="font-weight:750"><span>Neto</span><span>${money(sum(entradas, m => m.monto) - sum(salidas, m => m.monto))}</span></div>` : ''}
       </div>
     </div>
-    ${perm('caja') ? '<div style="margin-top:16px"><button class="btn bad lg" data-act="cerrarCaja">Cerrar caja</button></div>' : ''}
     ${histHTML}</div>`;
 }
 A.abrirCaja = () => {
@@ -1668,8 +1726,8 @@ A.abrirCaja = () => {
 A.mov = el => {
   const t = el.dataset.t;
   MODAL = { type: 'mov', t };
-  openModal(`${mHead(t === 'ingreso' ? 'Registrar ingreso' : 'Registrar egreso')}<div class="mb">
-    <div class="field"><label>Concepto</label><input class="inp" id="mv_c" placeholder="${t === 'ingreso' ? 'Ej: cambio adicional' : 'Ej: pago al proveedor de gas'}" autofocus></div>
+  openModal(`${mHead(t === 'ingreso' ? 'Entrada de dinero' : 'Salida de dinero')}<div class="mb">
+    <div class="field"><label>¿Qué es?</label><input class="inp" id="mv_c" placeholder="${t === 'ingreso' ? 'Ej: sencillo adicional' : 'Ej: pago del hielo, proveedor, adelanto'}" autofocus></div>
     <div class="grid2"><div class="field"><label>Valor</label><input class="inp money" id="mv_m" inputmode="numeric"></div>
     <div class="field"><label>Medio</label><select class="inp" id="mv_p">${medios().map(m => `<option>${esc(m)}</option>`).join('')}</select></div></div>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveMov" data-primary>Guardar</button></div>`);
@@ -1741,7 +1799,12 @@ function vVentas() {
   const porMedio = {}; ok.forEach(v => (v.pagos || []).forEach(p => porMedio[p.medio] = (porMedio[p.medio] || 0) + p.monto));
   const porTipo = {}; ok.forEach(v => { const t = porTipo[v.tipo] = porTipo[v.tipo] || { n: 0, t: 0 }; t.n++; t.t += v.total || 0; });
   const porMes = {}; ok.filter(v => v.tipo === 'mesa').forEach(v => { const k = v.meseroNombre || 'Sin mesero'; const t = porMes[k] = porMes[k] || { n: 0, t: 0, p: 0 }; t.n++; t.t += v.total || 0; t.p += v.propina || 0; });
-  const prods = {}; ok.forEach(v => (v.items || []).filter(i => i.estado !== 'anulado').forEach(i => { const p = prods[i.nombre] = prods[i.nombre] || { c: 0, t: 0 }; p.c += i.cant; p.t += i.cant * i.precio; }));
+  const costoDe = i => i.costo != null ? Number(i.costo) || 0 : Number((gProd(i.productoId) || {}).costo) || 0;
+  const prods = {}; ok.forEach(v => (v.items || []).filter(i => i.estado !== 'anulado').forEach(i => { const p = prods[i.nombre] = prods[i.nombre] || { c: 0, t: 0, g: 0 }; p.c += i.cant; p.t += i.cant * i.precio; p.g += i.cant * (i.precio - costoDe(i)); }));
+  const verCostos = perm('costos');
+  const netas = sum(ok, v => (v.subtotal || 0) - (v.descuentoValor || 0));
+  const costoVend = sum(ok, v => sum((v.items || []).filter(i => i.estado !== 'anulado'), i => costoDe(i) * i.cant));
+  const ganancia = netas - costoVend;
   const top = Object.entries(prods).sort((a, b) => b[1].c - a[1].c).slice(0, 10);
   const TN = { mesa: 'Mesas', mostrador: 'Mostrador', domicilio: 'Domicilios' };
   const listCard = (title, rows) => `<div class="card pad"><h3 class="sec-t">${title}</h3>${rows || '<p class="muted small">Sin datos</p>'}</div>`;
@@ -1752,13 +1815,18 @@ function vVentas() {
       <div class="card kpi"><div class="l">Ticket promedio</div><div class="v">${money(ok.length ? tot / ok.length : 0)}</div><div class="muted small">${pers} personas en mesa</div></div>
       <div class="card kpi"><div class="l">Propinas</div><div class="v">${money(prop)}</div><div class="muted small">descuentos ${money(desc)}</div></div>
     </div>
+    ${verCostos ? `<div class="kpis">
+      <div class="card kpi"><div class="l">Costo de lo vendido</div><div class="v">${money(costoVend)}</div><div class="muted small">lo que vale en factura del proveedor</div></div>
+      <div class="card kpi"><div class="l">Ganancia bruta</div><div class="v" style="color:${ganancia >= 0 ? 'var(--ok)' : 'var(--bad)'}">${money(ganancia)}</div><div class="muted small">ventas sin domicilios − costo</div></div>
+      <div class="card kpi"><div class="l">% de utilidad</div><div class="v">${netas ? Math.round(ganancia / netas * 1000) / 10 : 0}%</div><div class="muted small">ganancia sobre ventas</div></div>
+    </div>` : ''}
     <div class="grid3" style="align-items:start;margin-bottom:16px">
       ${listCard('Recaudo por medio de pago', Object.entries(porMedio).sort((a, b) => b[1] - a[1]).map(([m, v]) => `<div class="list-row"><span>${esc(m)}</span><b>${money(v)}</b></div>`).join(''))}
       ${listCard('Por tipo de venta', Object.entries(porTipo).map(([t, v]) => `<div class="list-row"><span>${TN[t] || t} <span class="muted">· ${v.n}</span></span><b>${money(v.t)}</b></div>`).join(''))}
       ${listCard('Por mesero', Object.entries(porMes).sort((a, b) => b[1].t - a[1].t).map(([m, v]) => `<div class="list-row"><span>${esc(m)} <span class="muted">· ${v.n} mesas</span></span><span class="num"><b>${money(v.t)}</b><div class="muted small">prop. ${money(v.p)}</div></span></div>`).join(''))}
     </div>
     <div class="grid2" style="align-items:start;grid-template-columns:1fr 2fr">
-      ${listCard('Más vendidos', top.map(([n, v], i) => `<div class="list-row"><span><span class="muted">${i + 1}.</span> ${esc(n)}</span><span class="num"><b>${v.c}</b> <span class="muted small">${money(v.t)}</span></span></div>`).join(''))}
+      ${listCard('Más vendidos', top.map(([n, v], i) => `<div class="list-row"><span><span class="muted">${i + 1}.</span> ${esc(n)}</span><span class="num"><b>${v.c}</b> <span class="muted small">${money(v.t)}</span>${verCostos ? `<div class="small" style="color:var(--ok)">gan. ${money(v.g)}</div>` : ''}</span></div>`).join(''))}
       <div class="card" style="overflow:auto"><div class="row between pad" style="padding-bottom:6px"><h3 class="sec-t" style="margin:0">Detalle</h3><button class="btn sm" data-act="exportVentas" ${list.length ? '' : 'disabled'}>Exportar a Excel</button></div>
       ${list.length ? `<table class="tbl"><thead><tr><th>Hora</th><th>Cuenta</th><th>Atendió</th><th>Pago</th><th class="num">Total</th></tr></thead><tbody>
       ${list.map(v => `<tr class="click" data-act="verVenta" data-id="${v.id}" style="${v.estado === 'anulada' ? 'opacity:.55' : ''}"><td>${hhmm(v.cerradaEn)}</td><td><b>${esc(tituloVenta(v))}</b>${v.estado === 'anulada' ? ' <span class="tag bad">Anulada</span>' : ''}</td><td>${esc(v.meseroNombre || (v.cliente && v.cliente.nombre) || '')}</td><td class="small">${esc((v.pagos || []).map(p => p.medio).join(', '))}</td><td class="num"><b>${money((v.total || 0) + (v.propina || 0))}</b></td></tr>`).join('')}
@@ -1794,6 +1862,7 @@ A.anularCerrada = () => {
 A.confAnularCerrada = () => {
   const m = $('#ac_m').value.trim(); if (!m) return toast('Escribe el motivo', 'err');
   const id = MODAL.id;
+  const vv = findVenta(id); if (vv && vv.estado === 'cerrada') moverStock(vv.items, +1);
   DB.update('ventas', id, { estado: 'anulada', anuladaMotivo: m, anuladaPor: S.user.nombre, anuladaEn: now() });
   const lv = LAST_VENTAS.find(v => v.id === id); if (lv) Object.assign(lv, { estado: 'anulada', anuladaMotivo: m });
   closeModal(); toast('Venta anulada'); render();
@@ -1817,9 +1886,9 @@ function vProductos() {
       <button class="opt" data-act="prodCat" data-id="all" style="${S.prodCat === 'all' ? 'color:var(--accent)' : ''}">Todas <span class="muted">${S.productos.length}</span></button>
       ${S.categorias.map(c => `<div class="row" style="border-bottom:1px solid var(--line)"><button class="opt" style="border:0;flex:1;${S.prodCat === c.id ? 'color:var(--accent)' : ''}" data-act="prodCat" data-id="${c.id}"><span class="row"><i style="width:11px;height:11px;border-radius:50%;background:${c.color};display:inline-block"></i>${esc(c.nombre)}</span><span class="muted">${cnt(c.id)}</span></button><button class="btn sm ghost" data-act="editCat" data-id="${c.id}" title="Editar">✎</button></div>`).join('')}
     </div>
-    <div class="card" style="overflow:auto"><div class="row pad" style="padding-bottom:10px"><input class="inp" id="prodq" data-in="prodQ" placeholder="Buscar producto…" value="${esc(S.prodQ)}" style="max-width:320px"><div class="grow" style="flex:1"></div><button class="btn pri" data-act="editProd">+ Producto</button></div>
-      ${ps.length ? `<table class="tbl"><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Precio</th><th>Cocina</th><th>Activo</th></tr></thead><tbody>
-      ${ps.map(p => { const c = gCat(p.categoriaId); return `<tr class="click" data-act="editProd" data-id="${p.id}" style="${p.activo === false ? 'opacity:.5' : ''}"><td><b>${esc(p.nombre)}</b></td><td>${c ? `<span class="tag" style="background:${c.color}22;color:${c.color}">${esc(c.nombre)}</span>` : '<span class="muted">—</span>'}</td><td class="num">${money(p.precio)}</td><td>${p.cocina !== false ? 'Sí' : '<span class="muted">No</span>'}</td><td data-act="noop"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--accent)" data-ch="prodActivo" data-id="${p.id}" ${p.activo !== false ? 'checked' : ''}></td></tr>`; }).join('')}
+    <div class="card" style="overflow:auto"><div class="row pad" style="padding-bottom:10px"><input class="inp" id="prodq" data-in="prodQ" placeholder="Buscar producto…" value="${esc(S.prodQ)}" style="max-width:320px"><div class="grow" style="flex:1"></div>${perm('productos') ? '<button class="btn" data-act="impAbrir">Importar Excel</button>' : ''}<button class="btn pri" data-act="editProd">+ Producto</button></div>
+      ${ps.length ? `<table class="tbl"><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Precio</th>${perm('costos') ? '<th class="num">Costo</th><th class="num">Ganancia x und</th>' : ''}<th class="num">Stock</th><th>Comanda</th><th>Activo</th></tr></thead><tbody>
+      ${ps.map(p => { const c = gCat(p.categoriaId); return `<tr class="click" data-act="editProd" data-id="${p.id}" style="${p.activo === false ? 'opacity:.5' : ''}"><td><b>${esc(p.nombre)}</b></td><td>${c ? `<span class="tag" style="background:${c.color}22;color:${c.color}">${esc(c.nombre)}</span>` : '<span class="muted">—</span>'}</td><td class="num">${money(p.precio)}</td>${perm('costos') ? `<td class="num">${p.costo ? money(p.costo) : '<span class="muted">—</span>'}</td><td class="num">${p.costo ? `${money(p.precio - p.costo)} <span class="muted small">${Math.round((p.precio - p.costo) / p.costo * 100)}%</span>` : '<span class="muted">—</span>'}</td>` : ''}<td class="num">${stockTag(p)}</td><td>${p.cocina !== false ? 'Sí' : '<span class="muted">No</span>'}</td><td data-act="noop"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--accent)" data-ch="prodActivo" data-id="${p.id}" ${p.activo !== false ? 'checked' : ''}></td></tr>`; }).join('')}
       </tbody></table>` : '<div class="empty">No hay productos' + (S.productos.length ? ' con ese filtro' : '. Crea el primero con "+ Producto"') + '</div>'}
     </div></div></div>`;
 }
@@ -1834,7 +1903,11 @@ A.editProd = el => {
     <div class="field"><label>Nombre</label><input class="inp" id="pr_n" value="${esc(p ? p.nombre : '')}" autofocus></div>
     <div class="grid2"><div class="field"><label>Categoría</label><select class="inp" id="pr_c">${S.categorias.map(c => `<option value="${c.id}" ${c.id === catSel ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select></div>
     <div class="field"><label>Precio (con impuestos)</label><input class="inp money" id="pr_p" inputmode="numeric" value="${p ? num(p.precio) : ''}"></div></div>
-    <label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina (aparece en la comanda)</label>
+    ${perm('costos') ? `<div class="field"><label>Costo (precio de factura)</label><input class="inp money" id="pr_cost" inputmode="numeric" value="${p && p.costo ? num(p.costo) : ''}"></div>` : ''}
+    <label class="chk"><input type="checkbox" id="pr_cs" data-ch="prCs" ${p && p.controlStock ? 'checked' : ''}> Controlar stock (se descuenta con cada venta)</label>
+    <div class="grid2 ${p && p.controlStock ? '' : 'hidden'}" id="pr_stk"><div class="field"><label>Stock actual</label><input class="inp" id="pr_st" type="number" step="any" value="${p && p.stock != null ? p.stock : ''}"></div>
+    <div class="field"><label>Avisar cuando queden</label><input class="inp" id="pr_min" type="number" min="0" value="${p && p.stockMin ? p.stockMin : ''}" placeholder="Ej: 6"></div></div>
+    <label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina / barra (aparece en la comanda)</label>
     <label class="chk"><input type="checkbox" id="pr_a" ${!p || p.activo !== false ? 'checked' : ''}> Activo (disponible para vender)</label>
   </div><div class="mf">${p ? '<button class="btn bad" data-act="delProd" style="margin-right:auto">Eliminar</button>' : ''}<button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveProd" data-primary>Guardar</button></div>`);
 };
@@ -1842,7 +1915,18 @@ A.saveProd = () => {
   const n = $('#pr_n').value.trim(); let pr = parseMoney($('#pr_p').value); if (pr > 0 && pr < 1000) pr *= 1000;
   if (!n) return toast('Escribe el nombre', 'err');
   if (!(pr > 0)) return toast('Escribe el precio', 'err');
-  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked };
+  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked };
+  if ($('#pr_cost')) { let c = parseMoney($('#pr_cost').value); if (c > 0 && c < 1000 && pr >= 1000) c *= 1000; d.costo = c; }
+  d.stockMin = Math.max(0, parseFloat($('#pr_min').value) || 0);
+  const old = MODAL.id ? gProd(MODAL.id) : null;
+  const stV = $('#pr_st').value;
+  if (d.controlStock && stV !== '') {
+    const st = parseFloat(stV) || 0;
+    if (!old || (Number(old.stock) || 0) !== st) {
+      d.stock = st;
+      DB.add('invmov', { productoId: MODAL.id || '', nombre: n, tipo: 'ajuste', cant: st - (old ? Number(old.stock) || 0 : 0), stockFinal: st, costo: d.costo ?? (old && old.costo) ?? 0, nota: 'Ajuste desde el producto', usuario: S.user.nombre, fecha: now() });
+    }
+  } else if (d.controlStock && !old) d.stock = 0;
   if (MODAL.id) DB.update('productos', MODAL.id, d); else DB.add('productos', { ...d, orden: S.productos.length + 1 });
   closeModal(); toast('Producto guardado', 'ok');
 };
@@ -2360,6 +2444,448 @@ A.adGuardarAj = () => {
   DB.rset('nexora/ajustes', d);
   if ($('#aj2_all').checked) (S.ad.lics || []).forEach(l => DB.rset('licencias/' + l.id, { instrucciones: d.instrucciones, linkPago: d.linkPago, whatsapp: d.whatsapp }));
   closeModal(); toast('Datos de cobro guardados', 'ok');
+};
+
+/* =====================================================================
+   INVENTARIO: stock, entradas de mercancía, conteo físico e importación
+   ===================================================================== */
+S.invmovs = null; S.invQ = ''; S.invF = 'todos';
+const byCatNombre = (a, b) => ((gCat(a.categoriaId) || {}).orden ?? 999) - ((gCat(b.categoriaId) || {}).orden ?? 999) || String(a.nombre).localeCompare(String(b.nombre), 'es', { numeric: true });
+function stockTag(p) {
+  if (!p.controlStock) return '<span class="muted">—</span>';
+  const st = Number(p.stock) || 0;
+  const cls = st <= 0 ? 'bad' : (p.stockMin && st <= p.stockMin ? 'warn' : '');
+  return `<span class="stk ${cls}">${num(st)}</span>`;
+}
+const MOV_LBL = { entrada: ['ok', 'Entrada'], ajuste: ['warn', 'Ajuste'], conteo: ['info', 'Conteo'], importacion: ['', 'Importación'] };
+
+function vInventario() {
+  if (S.invmovs == null) {
+    S.invmovs = 'loading';
+    DB.query('invmov', [['fecha', '>=', now() - 45 * 864e5]]).then(l => { S.invmovs = l.sort((a, b) => b.fecha - a.fecha).slice(0, 40); render(); }).catch(() => { S.invmovs = []; render(); });
+  }
+  const verC = perm('costos');
+  const ctrl = S.productos.filter(p => p.controlStock);
+  const stk = p => Math.max(0, Number(p.stock) || 0);
+  const agot = ctrl.filter(p => (Number(p.stock) || 0) <= 0);
+  const bajos = ctrl.filter(p => { const s = Number(p.stock) || 0; return s > 0 && p.stockMin && s <= p.stockMin; });
+  const qn = norm(S.invQ);
+  let list = S.invF === 'agotados' ? agot : S.invF === 'bajos' ? bajos : ctrl;
+  list = list.filter(p => !qn || norm(p.nombre).includes(qn)).sort(byCatNombre);
+  const movs = Array.isArray(S.invmovs) ? S.invmovs : [];
+  const head = topHTML('Inventario', `<span class="tag">${ctrl.length} productos con stock</span>`);
+  if (!ctrl.length) return head + `<div class="wrap"><div class="card pad empty">
+    <h3 class="sec-t">Todavía no hay productos con control de stock</h3>
+    <p class="muted" style="margin-bottom:14px">Importa el Excel del inventario o activa "Controlar stock" en cada producto.</p>
+    <button class="btn pri" data-act="impAbrir">Importar Excel</button></div></div>`;
+  return head + `<div class="wrap">
+    <div class="kpis">
+      ${verC ? `<div class="card kpi"><div class="l">Inventario a costo</div><div class="v">${money(sum(ctrl, p => stk(p) * (Number(p.costo) || 0)))}</div><div class="muted small">lo que vale en factura</div></div>` : ''}
+      <div class="card kpi"><div class="l">Inventario a precio de venta</div><div class="v">${money(sum(ctrl, p => stk(p) * (Number(p.precio) || 0)))}</div><div class="muted small">si se vendiera todo</div></div>
+      <div class="card kpi"><div class="l">Agotados</div><div class="v" style="color:${agot.length ? 'var(--bad)' : 'inherit'}">${agot.length}</div><div class="muted small">stock en cero</div></div>
+      <div class="card kpi"><div class="l">Por acabarse</div><div class="v" style="color:${bajos.length ? '#b26a00' : 'inherit'}">${bajos.length}</div><div class="muted small">en el mínimo o menos</div></div>
+    </div>
+    <div class="row wrap" style="margin-bottom:12px">
+      <div class="tabs">${[['todos', 'Todos'], ['bajos', 'Por acabarse'], ['agotados', 'Agotados']].map(([k, l]) => `<button class="${S.invF === k ? 'on' : ''}" data-act="invF" data-f="${k}">${l}</button>`).join('')}</div>
+      <input class="inp" id="invq" data-in="invQ" placeholder="Buscar…" value="${esc(S.invQ)}" style="max-width:220px;min-height:38px">
+      <div style="flex:1"></div>
+      <button class="btn" data-act="impAbrir">Importar Excel</button>
+      <button class="btn" data-act="invConteo">Conteo físico</button>
+      <button class="btn pri" data-act="invEntrada">+ Entrada de mercancía</button>
+    </div>
+    <div class="card" style="overflow:auto">${list.length ? `<table class="tbl"><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Stock</th><th class="num">Mínimo</th>${verC ? '<th class="num">Costo</th>' : ''}<th class="num">Precio</th>${verC ? '<th class="num">Valor a costo</th>' : ''}<th></th></tr></thead><tbody>
+      ${list.map(p => { const c = gCat(p.categoriaId); return `<tr><td><b>${esc(p.nombre)}</b></td><td>${c ? `<span class="tag" style="background:${c.color}22;color:${c.color}">${esc(c.nombre)}</span>` : ''}</td>
+        <td class="num">${stockTag(p)}</td><td class="num muted">${p.stockMin ? num(p.stockMin) : '—'}</td>${verC ? `<td class="num">${money(p.costo)}</td>` : ''}<td class="num">${money(p.precio)}</td>${verC ? `<td class="num">${money(stk(p) * (Number(p.costo) || 0))}</td>` : ''}
+        <td class="num"><button class="btn sm" data-act="invAjuste" data-id="${p.id}">Ajustar</button></td></tr>`; }).join('')}
+      </tbody></table>` : '<div class="empty">No hay productos con ese filtro</div>'}</div>
+    <h3 class="sec-t" style="margin-top:22px">Movimientos recientes</h3>
+    <div class="card pad">${movs.length ? movs.map(m => { const lb = MOV_LBL[m.tipo] || ['', m.tipo]; return `<div class="list-row"><span><span class="tag ${lb[0]}">${lb[1]}</span> <b>${esc(m.nombre)}</b><div class="muted small">${fechaHora(m.fecha)} · ${esc(m.usuario || '')}${m.nota ? ' · ' + esc(m.nota) : ''}</div></span>${m.tipo === 'importacion' ? '' : `<b style="color:${m.cant >= 0 ? 'var(--ok)' : 'var(--bad)'}">${m.cant > 0 ? '+' : ''}${num(m.cant)}</b>`}</div>`; }).join('') : `<p class="muted small">${S.invmovs === 'loading' ? 'Cargando…' : 'Aquí aparecen las entradas de mercancía, los ajustes y los conteos.'}</p>`}</div>
+  </div>`;
+}
+A.invF = el => { S.invF = el.dataset.f; render(); };
+IN.invQ = el => { S.invQ = el.value; render(); };
+CH.prCs = el => { const b = $('#pr_stk'); if (b) b.classList.toggle('hidden', !el.checked); };
+const rowFilter = el => $$('#modal [data-n]').forEach(r => { r.style.display = norm(r.dataset.n).includes(norm(el.value)) ? '' : 'none'; });
+IN.invFiltro = rowFilter;
+
+/* ---------- entrada de mercancía (factura del proveedor) ---------- */
+A.invEntrada = () => {
+  const ps = S.productos.filter(p => p.controlStock).sort(byCatNombre);
+  const verC = perm('costos');
+  MODAL = { type: 'invEntrada', ids: ps.map(p => p.id) };
+  openModal(`${mHead('Entrada de mercancía')}<div class="mb">
+    <p class="muted small" style="margin-bottom:10px">Escribe cuántas unidades llegaron de cada producto. Deja en blanco los que no llegaron.</p>
+    <div class="grid2"><div class="field"><label>Proveedor / número de factura</label><input class="inp" id="ie_nota" placeholder="Ej: Estanco, factura 1234"></div>
+    <div class="field"><label>Buscar producto</label><input class="inp" data-in="invFiltro" placeholder="Filtrar la lista…"></div></div>
+    <div class="imp-prev" style="max-height:48vh"><table class="tbl"><thead><tr><th>Producto</th><th class="num">Stock</th><th class="num">Llegan</th>${verC ? '<th class="num">Costo unidad</th>' : ''}</tr></thead><tbody>
+    ${ps.map((p, i) => `<tr data-n="${esc(p.nombre)}"><td>${esc(p.nombre)}</td><td class="num">${stockTag(p)}</td>
+      <td class="num"><input class="inp" id="ie_q${i}" type="number" min="0" step="any" style="width:90px;min-height:36px;text-align:right"></td>
+      ${verC ? `<td class="num"><input class="inp money" id="ie_c${i}" inputmode="numeric" style="width:110px;min-height:36px;text-align:right" value="${p.costo ? num(p.costo) : ''}"></td>` : ''}</tr>`).join('')}
+    </tbody></table></div>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="invGuardarEntrada">Guardar entrada</button></div>`, true);
+};
+A.invGuardarEntrada = () => {
+  const nota = $('#ie_nota').value.trim(); let n = 0, valor = 0;
+  MODAL.ids.forEach((id, i) => {
+    const q = parseFloat($('#ie_q' + i).value); if (!(q > 0)) return;
+    const p = gProd(id); if (!p) return;
+    const cEl = $('#ie_c' + i); let c = cEl ? parseMoney(cEl.value) : (Number(p.costo) || 0);
+    if (c > 0 && c < 1000 && (p.precio || 0) >= 1000) c *= 1000;
+    DB.inc('productos', id, 'stock', q);
+    if (cEl && c > 0 && c !== Number(p.costo)) DB.update('productos', id, { costo: c });
+    DB.add('invmov', { productoId: id, nombre: p.nombre, tipo: 'entrada', cant: q, costo: c, nota, usuario: S.user.nombre, fecha: now() });
+    n++; valor += q * c;
+  });
+  if (!n) return toast('Escribe la cantidad de al menos un producto', 'err');
+  closeModal(); S.invmovs = null; toast(`Entrada guardada · ${n} productos${perm('costos') ? ' · ' + money(valor) : ''}`, 'ok'); render();
+};
+
+/* ---------- conteo físico (descuadre) ---------- */
+A.invConteo = () => {
+  const ps = S.productos.filter(p => p.controlStock).sort(byCatNombre);
+  const verC = perm('costos');
+  MODAL = { type: 'invConteo', ids: ps.map(p => p.id), sis: ps.map(p => Number(p.stock) || 0), cost: ps.map(p => Number(p.costo) || 0) };
+  openModal(`${mHead('Conteo físico')}<div class="mb">
+    <p class="muted small" style="margin-bottom:10px">Cuenta lo que hay en neveras y bodega y escríbelo en "Contado". Los que dejes en blanco no se tocan.</p>
+    <div class="field"><input class="inp" data-in="invFiltro" placeholder="Buscar producto…"></div>
+    <div class="imp-prev" style="max-height:46vh"><table class="tbl"><thead><tr><th>Producto</th><th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferencia</th>${verC ? '<th class="num">Valor</th>' : ''}</tr></thead><tbody>
+    ${ps.map((p, i) => `<tr data-n="${esc(p.nombre)}"><td>${esc(p.nombre)}</td><td class="num">${num(MODAL.sis[i])}</td>
+      <td class="num"><input class="inp" id="ic_${i}" data-in="icRow" data-i="${i}" type="number" min="0" step="any" style="width:90px;min-height:36px;text-align:right"></td>
+      <td class="num" id="icd_${i}">—</td>${verC ? `<td class="num" id="icv_${i}">—</td>` : ''}</tr>`).join('')}
+    </tbody></table></div>
+    <div class="paysum okk" id="ic_tot" style="margin-top:12px"><span>Descuadre</span><span>$ 0</span></div>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="invGuardarConteo">Guardar conteo</button></div>`, true);
+};
+IN.icRow = () => {
+  let tot = 0, any = false;
+  MODAL.ids.forEach((id, i) => {
+    const el = $('#ic_' + i), d = $('#icd_' + i), v = $('#icv_' + i); if (!el) return;
+    if (el.value === '') { d.textContent = '—'; d.style.color = ''; if (v) v.textContent = '—'; return; }
+    any = true; const dif = (parseFloat(el.value) || 0) - MODAL.sis[i]; tot += dif * MODAL.cost[i];
+    d.textContent = (dif > 0 ? '+' : '') + num(dif); d.style.color = dif < 0 ? 'var(--bad)' : dif > 0 ? 'var(--ok)' : '';
+    if (v) v.textContent = money(dif * MODAL.cost[i]);
+  });
+  const t = $('#ic_tot');
+  t.className = 'paysum ' + (tot < 0 ? 'falta' : 'okk');
+  t.innerHTML = `<span>${any ? (tot < 0 ? 'Faltante' : tot > 0 ? 'Sobrante' : 'Cuadra exacto') : 'Descuadre'}</span><span>${perm('costos') ? money(Math.abs(tot)) : ''}</span>`;
+};
+A.invGuardarConteo = () => {
+  let n = 0, tot = 0;
+  MODAL.ids.forEach((id, i) => {
+    const el = $('#ic_' + i); if (!el || el.value === '') return;
+    const p = gProd(id); if (!p) return;
+    const cont = parseFloat(el.value) || 0, dif = cont - MODAL.sis[i];
+    n++; tot += dif * MODAL.cost[i];
+    if (dif !== 0) DB.inc('productos', id, 'stock', dif);
+    DB.add('invmov', { productoId: id, nombre: p.nombre, tipo: 'conteo', cant: dif, sistema: MODAL.sis[i], contado: cont, costo: MODAL.cost[i], nota: dif ? (dif < 0 ? 'Faltante' : 'Sobrante') : 'Cuadra', usuario: S.user.nombre, fecha: now() });
+  });
+  if (!n) return toast('Escribe lo contado de al menos un producto', 'err');
+  closeModal(); S.invmovs = null;
+  toast(`Conteo guardado · ${n} productos${perm('costos') && tot ? ' · ' + (tot < 0 ? 'faltante ' : 'sobrante ') + money(Math.abs(tot)) : ''}`, tot < 0 ? 'err' : 'ok'); render();
+};
+
+/* ---------- ajuste de un producto ---------- */
+A.invAjuste = el => {
+  const p = gProd(el.dataset.id); if (!p) return;
+  MODAL = { type: 'invAjuste', id: p.id, signo: -1 };
+  const mot = ['Rotura / merma', 'Consumo interno', 'Cortesía', 'Vencido', 'Corrección'];
+  openModal(`${mHead('Ajustar ' + esc(p.nombre))}<div class="mb">
+    <p class="muted small" style="margin-bottom:10px">Stock actual: <b>${num(p.stock)}</b></p>
+    <div class="seg" style="margin-bottom:12px"><button class="on" data-act="ajSigno" data-s="-1">Sacar unidades</button><button data-act="ajSigno" data-s="1">Sumar unidades</button></div>
+    <div class="field"><label>Cantidad</label><input class="inp" id="aj_q" type="number" min="0" step="any" autofocus></div>
+    <div class="field"><label>Motivo</label><div class="chips">${mot.map(m => `<button data-act="ajMot" data-t="${m}">${m}</button>`).join('')}</div><input class="inp" id="aj_m" placeholder="Escribe el motivo"></div>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="invGuardarAjuste" data-primary>Guardar</button></div>`);
+};
+A.ajSigno = el => { MODAL.signo = +el.dataset.s; $$('#modal .seg button').forEach(b => b.classList.toggle('on', b === el)); };
+A.ajMot = el => { $('#aj_m').value = el.dataset.t; };
+A.invGuardarAjuste = () => {
+  const q = parseFloat($('#aj_q').value), m = $('#aj_m').value.trim();
+  if (!(q > 0)) return toast('Escribe la cantidad', 'err');
+  if (!m) return toast('Escribe el motivo', 'err');
+  const p = gProd(MODAL.id); const cant = MODAL.signo * q;
+  DB.inc('productos', p.id, 'stock', cant);
+  DB.add('invmov', { productoId: p.id, nombre: p.nombre, tipo: 'ajuste', cant, costo: Number(p.costo) || 0, nota: m, usuario: S.user.nombre, fecha: now() });
+  closeModal(); S.invmovs = null; toast('Stock ajustado', 'ok'); render();
+};
+
+/* =====================================================================
+   IMPORTAR DESDE EXCEL (.xlsx, .xls o .csv)
+   ===================================================================== */
+const XLSX_URLS = ['https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/xlsx.mjs'];
+let XLSXmod = null, IMP = null;
+async function loadXLSX() {
+  if (XLSXmod) return XLSXmod;
+  for (const u of XLSX_URLS) { try { XLSXmod = await import(u); return XLSXmod; } catch (e) { console.warn('No cargó', u, e); } }
+  throw new Error('No se pudo cargar el lector de Excel. Revisa la conexión a internet.');
+}
+const IMP_CAMPOS = [['nombre', 'Producto *'], ['precio', 'Precio de venta *'], ['costo', 'Costo'], ['stock', 'Stock'], ['categoria', 'Categoría'], ['stockMin', 'Stock mínimo'], ['comanda', 'Va a comanda (Sí/No)']];
+const IMP_RX = {
+  nombre: /^(producto|productos|nombre|descripcion|articulo|item|referencia)/,
+  precio: /^(precio\s*(de\s*)?venta|pvp|precio|valor\s*venta|precio\s*unitario)$/,
+  costo: /costo|precio\s*(de\s*)?(factura|compra)|valor\s*compra/,
+  stock: /^(stock|existencia|existencias|inventario|saldo|cantidad\s*actual)/,
+  categoria: /categor|grupo|familia|seccion|^tipo/,
+  stockMin: /minimo|^min\b/,
+  comanda: /comanda|cocina|barra|prepara/,
+};
+const colLetter = c => { let s = ''; c++; while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
+function toNum(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v;
+  let s = String(v).replace(/[$\s]/g, '');
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+  else s = s.replace(',', '.');
+  const n = parseFloat(s); return isNaN(n) ? null : n;
+}
+function impLoadSheet() {
+  const ws = IMP.wb.Sheets[IMP.sheet];
+  const rows = XLSXmod.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: false });
+  const all = Object.values(IMP_RX);
+  let hi = -1, best = 0;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const sc = (rows[i] || []).filter(c => typeof c === 'string' && all.some(rx => rx.test(norm(c).trim()))).length;
+    if (sc > best) { best = sc; hi = i; }
+  }
+  const ncol = Math.max(0, ...rows.slice(0, 60).map(r => (r ? r.length : 0)));
+  IMP.headers = Array.from({ length: ncol }, (_, c) => { const h = hi >= 0 ? (rows[hi] || [])[c] : null; return h != null && String(h).trim() ? String(h).trim() : 'Columna ' + colLetter(c); });
+  IMP.data = rows.slice(hi + 1);
+  const map = {}, used = new Set();
+  IMP_CAMPOS.forEach(([k]) => {
+    const i = IMP.headers.findIndex((h, c) => !used.has(c) && !/^Columna /.test(h) && IMP_RX[k].test(norm(h).trim()));
+    map[k] = i; if (i >= 0) used.add(i);
+  });
+  if (map.nombre < 0) { // la columna con más textos
+    let bc = -1, bn = 0;
+    for (let c = 0; c < ncol; c++) { if (used.has(c)) continue; const n = IMP.data.filter(r => r && typeof r[c] === 'string' && r[c].trim().length > 1).length; if (n > bn) { bn = n; bc = c; } }
+    map.nombre = bc;
+  }
+  IMP.map = map;
+}
+function impRows() {
+  const m = IMP.map, out = new Map(); let ign = 0;
+  const cell = (r, k) => (m[k] >= 0 && r ? r[m[k]] : null);
+  IMP.data.forEach(r => {
+    const nRaw = cell(r, 'nombre');
+    const nombre = typeof nRaw === 'string' ? nRaw.trim().replace(/\s+/g, ' ') : '';
+    const precio = toNum(cell(r, 'precio'));
+    if (!nombre || !(precio > 0) || /^(total|subtotal|gastos|ventas|ganancia|porcentaje)/.test(norm(nombre))) { if (r && r.some(c => c != null && c !== '')) ign++; return; }
+    const stRaw = cell(r, 'stock'); const st = stRaw == null || stRaw === '' ? null : toNum(stRaw);
+    const cm = cell(r, 'comanda');
+    out.set(norm(nombre), {
+      nombre, precio: Math.round(precio), costo: Math.round(toNum(cell(r, 'costo')) || 0), stock: st, stockMin: toNum(cell(r, 'stockMin')) || 0,
+      categoria: String(cell(r, 'categoria') ?? '').trim(),
+      comanda: m.comanda < 0 ? true : (cm != null && /^(si|s|x|1|true|yes)$/.test(norm(cm).trim())),
+    });
+  });
+  const rows = [...out.values()];
+  rows.forEach(x => { x.existe = S.productos.find(p => norm(p.nombre).trim() === norm(x.nombre).trim()) || null; });
+  return { rows, ign };
+}
+function impHTML() {
+  if (!IMP || IMP.step === 1) return `${mHead('Importar productos desde Excel')}<div class="mb">
+    <p style="margin-bottom:10px">Sube el archivo de Excel (.xlsx) o .csv con tus productos. La app reconoce estas columnas: <b>Producto, Precio de venta, Costo, Stock, Categoría, Stock mínimo y Comanda</b>. No importa el orden: después te deja revisar qué columna es cada cosa.</p>
+    <div class="field"><input class="inp" type="file" id="imp_file" data-ch="impFile" accept=".xlsx,.xls,.csv"></div>
+    ${IMP && IMP.err ? `<p class="small" style="color:var(--bad)">${esc(IMP.err)}</p>` : ''}${IMP && IMP.loading ? '<p class="muted small">Leyendo el archivo…</p>' : ''}
+    <p class="muted small">¿No tienes el archivo armado? <button class="lnk" data-act="impPlantilla">Descarga la plantilla</button>, llénala y súbela.</p>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cerrar</button></div>`;
+  const { rows, ign } = impRows();
+  const nuevos = rows.filter(r => !r.existe).length, upd = rows.length - nuevos;
+  const opt = sel => `<option value="-1">— no usar —</option>` + IMP.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${esc(h)}</option>`).join('');
+  return `${mHead('Importar · ' + esc(IMP.fileName))}<div class="mb">
+    ${IMP.wb.SheetNames.length > 1 ? `<div class="field"><label>Hoja del archivo</label><select class="inp" data-ch="impSheet">${IMP.wb.SheetNames.map(s => `<option ${s === IMP.sheet ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>` : ''}
+    <div class="grid3">${IMP_CAMPOS.map(([k, l]) => `<div class="field"><label>${l}</label><select class="inp" data-ch="impMap" data-k="${k}">${opt(IMP.map[k])}</select></div>`).join('')}</div>
+    <label class="chk"><input type="checkbox" id="imp_upd" ${IMP.upd !== false ? 'checked' : ''} data-ch="impUpd"> Si el producto ya existe (mismo nombre), actualizar su precio, costo y stock</label>
+    ${S.productos.length ? `<label class="chk"><input type="checkbox" id="imp_rep" ${IMP.rep ? 'checked' : ''} data-ch="impRep"> Borrar los productos que no están en este archivo (por ejemplo, el menú de ejemplo) — ${S.productos.filter(p => !rows.some(r => r.existe && r.existe.id === p.id)).length} productos</label>` : ''}
+    <div class="paysum ${rows.length ? 'okk' : 'falta'}" style="margin-top:8px"><span>${rows.length} productos listos · ${nuevos} nuevos · ${upd} ya existen</span><span>${ign ? ign + ' filas ignoradas' : ''}</span></div>
+    ${rows.length ? `<div class="imp-prev"><table class="tbl"><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Stock</th><th></th></tr></thead><tbody>
+      ${rows.slice(0, 60).map(r => `<tr><td>${esc(r.nombre)}</td><td>${esc(r.categoria || 'General')}</td><td class="num">${money(r.precio)}</td><td class="num">${r.costo ? money(r.costo) : '—'}</td><td class="num">${r.stock == null ? '<span class="muted">sin control</span>' : num(r.stock)}</td><td>${r.existe ? '<span class="tag info">Actualiza</span>' : '<span class="tag ok">Nuevo</span>'}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted small" style="margin-top:10px">No se encontraron productos. Revisa que estén bien elegidas las columnas de Producto y Precio de venta.</p>'}
+  </div><div class="mf"><button class="btn" data-act="impVolver" style="margin-right:auto">Elegir otro archivo</button><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="impImportar" ${rows.length ? '' : 'disabled'}>Importar ${rows.length} productos</button></div>`;
+}
+const impRefresh = () => { const b = $('#modal .mbox'); if (b) b.innerHTML = impHTML(); };
+A.impAbrir = () => { IMP = { step: 1 }; MODAL = { type: 'imp' }; openModal(impHTML(), true); };
+A.impVolver = () => { IMP = { step: 1 }; impRefresh(); };
+CH.impFile = async el => {
+  const f = el.files && el.files[0]; if (!f) return;
+  IMP = { step: 1, loading: true }; impRefresh();
+  try {
+    const X = await loadXLSX();
+    const buf = await f.arrayBuffer();
+    const wb = X.read(buf, { type: 'array' });
+    IMP = { step: 2, wb, fileName: f.name, sheet: wb.SheetNames[0], upd: true };
+    impLoadSheet();
+  } catch (e) { console.error(e); IMP = { step: 1, err: e.message || 'No se pudo leer el archivo' }; }
+  impRefresh();
+};
+CH.impSheet = el => { IMP.sheet = el.value; impLoadSheet(); impRefresh(); };
+CH.impMap = el => { IMP.map[el.dataset.k] = +el.value; impRefresh(); };
+CH.impUpd = el => { IMP.upd = el.checked; };
+CH.impRep = el => { IMP.rep = el.checked; impRefresh(); };
+A.impPlantilla = () => {
+  const rows = [['Producto', 'Categoría', 'Precio venta', 'Costo', 'Stock', 'Stock mínimo', 'Comanda'], ['Águila Original', 'Cervezas', '3500', '2083', '48', '24', 'No'], ['Michelada tradicional', 'Micheladas y cócteles', '8000', '5000', '', '', 'Sí']];
+  const csv = '﻿' + rows.map(r => r.join(';')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'plantilla-productos.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+A.impImportar = () => {
+  const { rows } = impRows(); if (!rows.length) return;
+  const upd = IMP.upd !== false;
+  const prodAntes = S.productos.slice(), catAntes = S.categorias.slice();
+  const catId = {}; catAntes.forEach(c => catId[norm(c.nombre).trim()] = c.id);
+  let orden = catAntes.length;
+  const usadas = new Set();
+  const getCat = name => {
+    const nm = name || 'General', k = norm(nm).trim();
+    if (!catId[k]) catId[k] = DB.add('categorias', { nombre: nm, color: COLORS[orden % COLORS.length], orden: ++orden });
+    usadas.add(catId[k]); return catId[k];
+  };
+  let nNew = 0, nUpd = 0, po = prodAntes.length;
+  rows.forEach(r => {
+    const d = { nombre: r.nombre, precio: r.precio, costo: r.costo, cocina: r.comanda, activo: true };
+    if (r.stock != null) { d.controlStock = true; d.stock = r.stock; d.stockMin = r.stockMin || 0; }
+    if (r.existe) {
+      if (!upd) { usadas.add(r.existe.categoriaId); return; }
+      if (r.categoria) d.categoriaId = getCat(r.categoria); else usadas.add(r.existe.categoriaId);
+      DB.update('productos', r.existe.id, d); nUpd++;
+    } else {
+      if (r.stock == null) d.controlStock = false;
+      DB.add('productos', { ...d, categoriaId: getCat(r.categoria), orden: ++po }); nNew++;
+    }
+  });
+  let nDel = 0;
+  if (IMP.rep) {
+    const keep = new Set(rows.filter(r => r.existe).map(r => r.existe.id));
+    prodAntes.filter(p => !keep.has(p.id)).forEach(p => { DB.del('productos', p.id); nDel++; });
+    catAntes.filter(c => !usadas.has(c.id)).forEach(c => DB.del('categorias', c.id));
+  }
+  DB.add('invmov', { productoId: '', nombre: `${nNew + nUpd} productos desde ${IMP.fileName}`, tipo: 'importacion', cant: 0, nota: `${nNew} nuevos, ${nUpd} actualizados`, usuario: S.user.nombre, fecha: now() });
+  closeModal(); S.invmovs = null; IMP = null;
+  toast(`Importación lista · ${nNew} nuevos · ${nUpd} actualizados${nDel ? ' · ' + nDel + ' borrados' : ''}`, 'ok'); S.vCat = 'all'; S.catId = 'all'; S.prodCat = 'all'; render();
+};
+
+/* =====================================================================
+   VENDER — venta rápida de barra / mostrador en una sola pantalla
+   ===================================================================== */
+S.cart = []; S.vCat = 'all'; S.vQ = ''; S.vShowCart = false;
+const CKEY = () => 'nexorapos_cart_' + DB.nid;
+function loadCart() { try { S.cart = JSON.parse(localStorage.getItem(CKEY())) || []; } catch (e) { S.cart = []; } }
+function saveCart() { try { localStorage.setItem(CKEY(), JSON.stringify(S.cart)); } catch (e) { } }
+let cartLoadedFor = null;
+const prefPrint = () => localStorage.getItem('nexorapos_print') === '1';
+
+function vVender() {
+  if (cartLoadedFor !== DB.nid) { loadCart(); cartLoadedFor = DB.nid; }
+  const cart = S.cart, total = sum(cart, i => i.precio * i.cant), n = sum(cart, i => i.cant);
+  const abierta = !!S.arqueo;
+  const vend = S.ventasCaja.filter(v => v.estado === 'cerrada');
+  const qn = norm(S.vQ);
+  const prods = S.productos.filter(p => p.activo !== false && (S.vCat === 'all' || p.categoriaId === S.vCat) && (!qn || norm(p.nombre).includes(qn)));
+  const cq = {}; cart.forEach(i => cq[i.productoId] = (cq[i.productoId] || 0) + i.cant);
+  const left = `<div class="pv-left" data-sk="vl">
+    <input class="inp" id="vsearch" data-in="vQ" placeholder="Buscar producto…" value="${esc(S.vQ)}" autocomplete="off">
+    <div class="cats"><button class="${S.vCat === 'all' ? 'on' : ''}" data-act="vCat" data-id="all">Todo</button>${S.categorias.map(ct => `<button class="${S.vCat === ct.id ? 'on' : ''}" data-act="vCat" data-id="${ct.id}"><i style="background:${ct.color}"></i>${esc(ct.nombre)}</button>`).join('')}</div>
+    <div class="prods">${prods.map(p => `<button class="prod" style="--c:${(gCat(p.categoriaId) || {}).color || '#cbd5e1'}" data-act="vAdd" data-id="${p.id}"><b>${esc(p.nombre)}</b>${p.controlStock && (Number(p.stock) || 0) <= 0 ? '<i class="ag">Agotado</i>' : (p.controlStock && p.stockMin && p.stock <= p.stockMin ? `<i class="ag low">Quedan ${num(p.stock)}</i>` : '')}<span>${money(p.precio)}</span>${cq[p.id] ? `<em class="pq">${cq[p.id]}</em>` : ''}</button>`).join('') || '<div class="empty">No hay productos' + (S.productos.length ? ' con ese filtro' : '. Créalos o impórtalos en Productos') + '</div>'}</div>
+  </div>`;
+  const caja = abierta
+    ? `<div class="vcaja ok"><span>Caja abierta · ${vend.length} ${vend.length === 1 ? 'venta' : 'ventas'} · <b>${money(sum(vend, v => (v.total || 0) + (v.propina || 0)))}</b></span>${perm('caja') ? '<button class="lnk" data-act="nav" data-v="caja">Ver caja</button>' : ''}</div>`
+    : (perm('caja') ? `<div class="vcaja bad"><b>La caja está cerrada</b><div class="small" style="margin:4px 0 8px">Para empezar a vender, escribe la base en efectivo del turno y abre la caja.</div>
+        <div class="row"><input class="inp money" id="vd_base" data-keep inputmode="numeric" placeholder="Base $" style="min-height:40px"><button class="btn pri" data-act="vdAbrirCaja">Abrir caja</button></div></div>`
+      : '<div class="vcaja bad"><b>La caja está cerrada.</b> Pide al cajero o al administrador que la abra.</div>');
+  const right = `<div class="pv-right">
+    <div class="acct-h">${caja}<div class="row between" style="margin-top:10px"><b style="font-size:16px">Venta actual</b>${cart.length ? '<button class="lnk" data-act="vVaciar">Vaciar</button>' : ''}</div></div>
+    <div class="acct-items" data-sk="vi">${cart.length ? cart.map(i => `<div class="it">
+        <div class="n"><b>${esc(i.nombre)}</b>${i.nota ? `<div class="nt">${esc(i.nota)}</div>` : ''}<div class="x"><button class="lnk" data-act="vNota" data-id="${i.id}">${i.nota ? 'Editar nota' : '+ Nota'}</button> · ${money(i.precio)} c/u</div></div>
+        <div class="qty"><button data-act="vq" data-id="${i.id}" data-d="-1">−</button><span>${i.cant}</span><button data-act="vq" data-id="${i.id}" data-d="1">+</button></div>
+        <div class="p" style="min-width:74px;text-align:right">${money(i.precio * i.cant)}</div></div>`).join('') : '<div class="empty">Toca los productos para agregarlos a la venta</div>'}</div>
+    <div class="acct-f">
+      <div class="tot big"><span>Total${n ? ` · ${n} und` : ''}</span><span>${money(total)}</span></div>
+      <div class="medbtns">${medios().map(m => `<button class="btn ${m === 'Efectivo' ? 'ok' : ''} lg" data-act="vCobrar" data-m="${esc(m)}" ${cart.length && abierta ? '' : 'disabled'}>${esc(m)}</button>`).join('')}</div>
+      <div class="acts" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="vCobrar" data-m="" ${cart.length && abierta ? '' : 'disabled'}>Pago mixto</button><button class="btn" data-act="vMesa" ${cart.length && perm('salon') ? '' : 'disabled'}>Pasar a una mesa</button></div>
+    </div></div>`;
+  return topHTML('Vender') + `<div class="mtabs"><button class="${!S.vShowCart ? 'on' : ''}" data-act="vShow" data-v="0">Productos</button><button class="${S.vShowCart ? 'on' : ''}" data-act="vShow" data-v="1">Venta · ${money(total)}${n ? ` <span class="tag warn">${n}</span>` : ''}</button></div>
+    <div class="pv ${S.vShowCart ? 'show-acct' : ''}">${left}${right}</div>`;
+}
+IN.vQ = el => { S.vQ = el.value; render(); };
+A.vCat = el => { S.vCat = el.dataset.id; render(); };
+A.vShow = el => { S.vShowCart = el.dataset.v === '1'; render(); };
+A.vAdd = el => {
+  const p = gProd(el.dataset.id); if (!p) return;
+  const ex = S.cart.find(i => i.productoId === p.id && !i.nota);
+  if (ex) ex.cant++;
+  else S.cart.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: '', cocina: p.cocina !== false });
+  saveCart(); render();
+};
+A.vq = el => {
+  const i = S.cart.find(x => x.id === el.dataset.id); if (!i) return;
+  i.cant += parseInt(el.dataset.d, 10);
+  if (i.cant <= 0) S.cart.splice(S.cart.indexOf(i), 1);
+  saveCart(); render();
+};
+A.vVaciar = () => { S.cart = []; saveCart(); render(); };
+A.vNota = el => {
+  const i = S.cart.find(x => x.id === el.dataset.id); if (!i) return;
+  MODAL = { type: 'vNota', id: i.id };
+  const sug = ['Sin hielo', 'Bien fría', 'Con limón y sal', 'Para llevar'];
+  openModal(`${mHead('Nota para ' + esc(i.nombre))}<div class="mb">
+    <div class="chips">${sug.map(s => `<button data-act="notaSug" data-t="${esc(s)}">${s}</button>`).join('')}</div>
+    <input class="inp" id="nota_t" value="${esc(i.nota)}" autofocus></div>
+    <div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="vSaveNota" data-primary>Guardar</button></div>`);
+};
+A.vSaveNota = () => { const i = S.cart.find(x => x.id === MODAL.id); if (i) { i.nota = $('#nota_t').value.trim(); saveCart(); } closeModal(); render(); };
+A.vdAbrirCaja = () => {
+  if (S.arqueo) return;
+  let base = parseMoney($('#vd_base').value); if (base > 0 && base < 1000) base *= 1000;
+  DB.add('arqueos', { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base });
+  $('#vd_base').value = ''; toast('Caja abierta · ya puedes vender', 'ok');
+};
+A.vCobrar = el => {
+  if (!S.cart.length) return;
+  if (!S.arqueo) return toast('Primero abre la caja', 'err');
+  const total = sum(S.cart, i => i.precio * i.cant);
+  const m = el.dataset.m;
+  PAY = { cart: true, c: { subtotal: total, desc: 0, envio: 0, total, propSug: 0 }, propinaOn: false, propina: 0, pagos: m ? [{ medio: m, monto: total }] : [], imprimir: prefPrint() };
+  MODAL = { type: 'pay' };
+  openModal(payHTML(null, m ? `Cobrar con ${esc(m)}` : 'Cobrar · pago mixto'), true);
+  payRefresh();
+  setTimeout(() => { const inp = $('#pay_r0'); if (inp && m === 'Efectivo') { inp.focus(); inp.select(); } else { const b = $('#pay_ok'); if (b) b.focus(); } }, 60);
+};
+function vFinalizar(st) {
+  const cart = S.cart; if (!cart.length || !S.arqueo) return;
+  const t = now(), cambio = st.cambio || 0;
+  const pagos = PAY.pagos.map(p => ({ ...p }));
+  if (cambio > 0) { const ef = pagos.find(p => p.medio === 'Efectivo'); ef.recibido = ef.monto; ef.monto -= cambio; }
+  const items = cart.map(i => ({ ...i, id: uid(), estado: 'enviado', enviadoEn: t, por: S.user.nombre }));
+  const subtotal = sum(items, i => i.precio * i.cant), propina = PAY.propinaOn ? PAY.propina : 0;
+  const numero = 1 + ventas().filter(v => v.abiertaEn >= S.dayStart).length;
+  const v = {
+    tipo: 'mostrador', rapida: true, numero, mesaId: null, personas: 0, meseroId: S.user.id, meseroNombre: S.user.nombre, cliente: null, envio: 0, nota: '',
+    items, descuento: null, estado: 'cerrada', etapa: 'entregado', precuentaEn: null, abiertaEn: t, abiertaPor: S.user.nombre, cerradaEn: t, cerradaPor: S.user.nombre,
+    pagos: pagos.filter(p => p.monto > 0 || p.recibido), cambio, subtotal, descuentoValor: 0, propina, total: subtotal, arqueoId: S.arqueo.id,
+  };
+  const id = DB.add('ventas', v);
+  moverStock(items, -1);
+  const coc = items.filter(i => i.cocina);
+  if (coc.length) DB.add('comandas', { ventaId: id, tipo: 'mostrador', titulo: 'Venta #' + numero, meseroNombre: S.user.nombre, items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
+  const imprimir = $('#pay_pr').checked; localStorage.setItem('nexorapos_print', imprimir ? '1' : '0');
+  S.cart = []; saveCart(); closeModal(); PAY = null; S.vShowCart = false;
+  if (imprimir) printComprobante(v);
+  toast(cambio > 0 ? `Venta #${numero} · Cambio ${money(cambio)}` : `Venta #${numero} registrada`, 'ok');
+  render();
+}
+A.vMesa = () => {
+  if (!S.cart.length) return;
+  MODAL = { type: 'vMesa' };
+  const salas = S.salas.map(s => {
+    const ms = S.mesas.filter(m => m.salaId === s.id); if (!ms.length) return '';
+    return `<p class="small muted" style="margin:10px 0 6px;font-weight:650">${esc(s.nombre)}</p><div class="chips">${ms.map(m => { const v = ventaDeMesa(m.id); return `<button data-act="vAMesa" data-id="${m.id}" style="${v ? 'background:var(--warn2)' : ''}">${esc(m.nombre)}${v ? ' · ' + money(calc(v).total) : ''}</button>`; }).join('')}</div>`;
+  }).join('');
+  openModal(`${mHead('Pasar la venta a una mesa')}<div class="mb" style="padding-bottom:18px"><p class="muted small">Las mesas en amarillo ya tienen cuenta abierta: los productos se suman a esa cuenta.</p>${salas || '<p class="muted">No hay mesas creadas</p>'}</div>`);
+};
+A.vAMesa = el => {
+  const mid = el.dataset.id; let v = ventaDeMesa(mid);
+  const id = v ? v.id : crearVenta({ tipo: 'mesa', mesaId: mid, personas: 1, meseroId: S.user.id, meseroNombre: S.user.nombre });
+  S.drafts[id] = [...(S.drafts[id] || []), ...S.cart.map(i => ({ ...i, id: uid() }))]; saveDrafts();
+  S.cart = []; saveCart(); closeModal(); openPedido(id);
+  toast('Productos pasados a la mesa · toca "Enviar" para confirmarlos');
 };
 
 /* ===================== inicio ===================== */
