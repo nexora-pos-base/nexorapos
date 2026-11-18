@@ -136,6 +136,10 @@ textarea.inp{min-height:70px;resize:vertical}
 .mesa .dot{position:absolute;top:7px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--bad)}
 .plano.edit .mesa{cursor:grab}
 .plano.edit .mesa:active{cursor:grabbing}
+.plano.grid{height:auto;min-height:0;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;background-image:none}
+.plano.grid .mesa,.plano.grid .mesa.redonda{position:relative!important;left:auto!important;top:auto!important;width:auto;height:86px;border-radius:14px}
+.plano.grid .mesa .mn{font-size:20px}
+.opgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 @media (max-width:760px){
   .plano{height:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:10px;background-image:none}
   .mesa,.mesa.redonda{position:relative!important;left:auto!important;top:auto!important;width:auto;height:92px;border-radius:14px}
@@ -335,6 +339,9 @@ a.btn{text-decoration:none}
 <div id="toast"></div>
 <div id="print"></div>
 <script type="module">
+/* Ejemplo de bar: productos del inventario de AC Boutique (semana NOVIEMBRE 13-16) */
+const BAR_EJEMPLO = [{"nombre": "Águila Original", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2083, "stock": 56, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Costeña", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 1875, "stock": 61, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Águila Light", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 1958, "stock": 9, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Costeñita", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2026, "stock": 236, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Póker", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2833, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Budweiser", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2500, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Club Colombia", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 18, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Heineken", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2583, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Stella", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 35, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Smirnoff", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 8000, "stock": 17, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Coronita", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2916, "stock": 56, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Electrolit", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 6583, "stock": 20, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Soda Bretaña", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2416, "stock": 10, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Agua", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 750, "stock": 22, "min": 12, "comanda": false, "opciones": []}, {"nombre": "Gatorade", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3333, "stock": 8, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Coca Cola", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2500, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Czechvar", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 9733, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Liefmans", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 13722, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "BBC", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 4747, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Aguardiente G", "cat": "Botellas", "precio": 125000, "costo": 94000, "stock": 3, "min": 3, "comanda": false, "opciones": []}, {"nombre": "Aguardiente Limo", "cat": "Botellas", "precio": 80000, "costo": 58000, "stock": 9, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Medellín G", "cat": "Botellas", "precio": 135000, "costo": 113000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "8 Años", "cat": "Botellas", "precio": 110000, "costo": 70000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Medellín Limo", "cat": "Botellas", "precio": 85000, "costo": 59000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas Litro", "cat": "Botellas", "precio": 85000, "costo": 53000, "stock": 1, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas Pipo", "cat": "Botellas", "precio": 70000, "costo": 50000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas G", "cat": "Botellas", "precio": 130000, "costo": 90000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Amarillo", "cat": "Botellas", "precio": 80000, "costo": 45000, "stock": 3, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Amarillo Garrafa", "cat": "Botellas", "precio": 120000, "costo": 86000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Aguardiente Pipo", "cat": "Botellas", "precio": 65000, "costo": 45000, "stock": 2, "min": 0, "comanda": false, "opciones": []}, {"nombre": "JP", "cat": "Botellas", "precio": 15000, "costo": 11300, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Buchanan's Master Litro", "cat": "Botellas", "precio": 15000, "costo": 8250, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Buchanan's Master 750", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Old Parr Litro", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Old Parr 750", "cat": "Botellas", "precio": 220000, "costo": 175000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Michelada tradicional", "cat": "Micheladas", "precio": 8000, "costo": 5000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda normal", "cat": "Micheladas", "precio": 10000, "costo": 7000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda cerveza", "cat": "Micheladas", "precio": 12000, "costo": 9000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Corona", "cat": "Micheladas", "precio": 15000, "costo": 10125, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Smirnoff", "cat": "Micheladas", "precio": 16000, "costo": 9500, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}];
+
 /* =====================================================================
    NEXORA POS — Piloto fase 1
    ---------------------------------------------------------------------
@@ -615,43 +622,70 @@ const DB = (() => {
       return F.setDoc(F.doc(fdb, path), data, { merge }).catch(e => { fail(path)(e); });
     },
     rnewId(col) { return mode === 'local' ? uid() : F.doc(F.collection(fdb, col)).id; },
+    /* borra todos los datos del negocio (para reiniciar un demo) */
+    async wipe(cols) {
+      if (mode === 'local') { cols.forEach(c => delete store[c]); delete store.__root; saveLocal(); return; }
+      for (const c of cols) {
+        const snap = await F.getDocs(cref(c));
+        for (let i = 0; i < snap.docs.length; i += 400) { const b = F.writeBatch(fdb); snap.docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
+      }
+      await F.deleteDoc(F.doc(fdb, 'negocios', nid));
+    },
     resetDemo() { localStorage.removeItem(LKEY); localStorage.removeItem('nexorapos_session'); location.reload(); },
   };
 })();
 
 /* ---------------- datos iniciales ---------------- */
-async function buildSeed(nombre, adminPin, demo, ejemplos = true) {
+/* tipo: 'bar' (ejemplo con los productos de AC Boutique), 'restaurante' o 'vacio' */
+async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
   const salt = DB.nid;
-  const mesas = {};
-  for (let i = 0; i < 8; i++) mesas['m' + (i + 1)] = { nombre: String(i + 1), salaId: 's1', x: 6 + (i % 4) * 23, y: 8 + Math.floor(i / 4) * 44, forma: i % 4 === 3 ? 'redonda' : 'cuadrada', orden: i + 1 };
-  for (let i = 0; i < 4; i++) mesas['t' + (i + 1)] = { nombre: 'T' + (i + 1), salaId: 's2', x: 8 + i * 22, y: 30, forma: 'redonda', orden: i + 1 };
-  const cats = { c1: ['Entradas', '#f59f00', 1], c2: ['Platos fuertes', '#e8590c', 2], c3: ['Comidas rápidas', '#d6336c', 3], c4: ['Bebidas', '#1098ad', 4], c5: ['Postres', '#ae3ec9', 5] };
-  const categorias = {}; for (const [id, [n, c, o]] of Object.entries(cats)) categorias[id] = { nombre: n, color: c, orden: o };
-  const P = [
-    ['Patacones con hogao', 'c1', 12000], ['Empanadas x3', 'c1', 9000], ['Arepa de huevo', 'c1', 6000],
-    ['Bandeja paisa', 'c2', 32000], ['Pechuga a la plancha', 'c2', 26000], ['Mojarra frita', 'c2', 35000], ['Churrasco', 'c2', 38000],
-    ['Hamburguesa sencilla', 'c3', 18000], ['Hamburguesa doble', 'c3', 24000], ['Salchipapa', 'c3', 16000], ['Perro caliente', 'c3', 14000],
-    ['Gaseosa 400 ml', 'c4', 4500, false], ['Jugo natural', 'c4', 7000], ['Limonada de coco', 'c4', 9000], ['Agua', 'c4', 3500, false], ['Cerveza', 'c4', 6000, false],
-    ['Brownie con helado', 'c5', 11000], ['Flan de caramelo', 'c5', 8000],
-  ];
-  const productos = {};
-  P.forEach(([n, c, p, k], i) => productos['p' + (i + 1)] = { nombre: n, categoriaId: c, precio: p, cocina: k !== false, activo: true, orden: i + 1 });
-  const usuarios = { u_admin: { nombre: 'Administrador', rol: 'admin', pin: await hashPin(adminPin, salt), activo: true } };
-  if (demo) {
-    usuarios.u_caja = { nombre: 'Laura (caja)', rol: 'cajero', pin: await hashPin('1111', salt), activo: true };
-    usuarios.u_mes1 = { nombre: 'Carlos', rol: 'mesero', pin: await hashPin('2222', salt), activo: true };
-    usuarios.u_mes2 = { nombre: 'Andrea', rol: 'mesero', pin: await hashPin('2222', salt), activo: true };
-    usuarios.u_coc = { nombre: 'Cocina', rol: 'cocina', pin: await hashPin('3333', salt), activo: true };
+  const mesas = {}, salas = {}, categorias = {}, productos = {};
+  const cfg = { nombre, nit: '', direccion: '', telefono: '', pie: '¡Gracias por su visita!', ticketAncho: 80, imprimirComanda: false, propinaPct: 10, impuestoNombre: 'Impoconsumo', impuestoPct: 8, mostrarImpuesto: true, medios: ['Efectivo', 'Tarjeta', 'Nequi', 'Daviplata', 'Transferencia'], permisos: DEFAULT_PERMS, nombreCocina: 'Cocina' };
+  const addMesa = (id, n, sala, k, forma = 'cuadrada') => { mesas[id] = { nombre: String(n), salaId: sala, x: 4 + (k % 6) * 15.5, y: 5 + (Math.floor(k / 6) % 5) * 19, forma, orden: parseInt(n, 10) || k + 1 }; };
+  if (tipo === 'bar') {
+    cfg.nombreCocina = 'Barra';
+    salas.s1 = { nombre: 'Salón', orden: 1, vista: 'cuadricula' };
+    salas.s2 = { nombre: 'Terraza', orden: 2, vista: 'cuadricula' };
+    let k = 0;
+    for (let n = 1; n <= 12; n++) addMesa('m' + n, n, 's1', k++);
+    for (let n = 21; n <= 80; n++) addMesa('m' + n, n, 's1', k++);
+    for (let n = 13; n <= 20; n++) addMesa('m' + n, n, 's2', n - 13);
+    const cats = {}; let co = 0;
+    const CC = { 'Cervezas / Sodas': '#e03131', 'Botellas': '#d6336c', 'Micheladas': '#ae3ec9' };
+    BAR_EJEMPLO.forEach((p, i) => {
+      if (!cats[p.cat]) { cats[p.cat] = 'c' + (++co); categorias[cats[p.cat]] = { nombre: p.cat, color: CC[p.cat] || COLORS[co % COLORS.length], orden: co }; }
+      const d = { nombre: p.nombre, categoriaId: cats[p.cat], precio: p.precio, costo: p.costo || 0, cocina: !!p.comanda, activo: true, orden: i + 1, controlStock: p.stock != null, stockMin: p.min || 0 };
+      if (p.stock != null) d.stock = p.stock;
+      if (p.opciones && p.opciones.length) d.opciones = p.opciones;
+      productos['p' + (i + 1)] = d;
+    });
+  } else {
+    salas.s1 = { nombre: 'Salón principal', orden: 1 }; salas.s2 = { nombre: 'Terraza', orden: 2 };
+    for (let i = 0; i < 8; i++) mesas['m' + (i + 1)] = { nombre: String(i + 1), salaId: 's1', x: 6 + (i % 4) * 23, y: 8 + Math.floor(i / 4) * 44, forma: i % 4 === 3 ? 'redonda' : 'cuadrada', orden: i + 1 };
+    for (let i = 0; i < 4; i++) mesas['t' + (i + 1)] = { nombre: 'T' + (i + 1), salaId: 's2', x: 8 + i * 22, y: 30, forma: 'redonda', orden: i + 1 };
+    if (tipo === 'restaurante') {
+      const cats = { c1: ['Entradas', '#f59f00', 1], c2: ['Platos fuertes', '#e8590c', 2], c3: ['Comidas rápidas', '#d6336c', 3], c4: ['Bebidas', '#1098ad', 4], c5: ['Postres', '#ae3ec9', 5] };
+      for (const [id, [n, c, o]] of Object.entries(cats)) categorias[id] = { nombre: n, color: c, orden: o };
+      const P = [
+        ['Patacones con hogao', 'c1', 12000], ['Empanadas x3', 'c1', 9000], ['Arepa de huevo', 'c1', 6000],
+        ['Bandeja paisa', 'c2', 32000], ['Pechuga a la plancha', 'c2', 26000], ['Mojarra frita', 'c2', 35000], ['Churrasco', 'c2', 38000],
+        ['Hamburguesa sencilla', 'c3', 18000], ['Hamburguesa doble', 'c3', 24000], ['Salchipapa', 'c3', 16000], ['Perro caliente', 'c3', 14000],
+        ['Gaseosa 400 ml', 'c4', 4500, false], ['Jugo natural', 'c4', 7000], ['Limonada de coco', 'c4', 9000], ['Agua', 'c4', 3500, false], ['Cerveza', 'c4', 6000, false],
+        ['Brownie con helado', 'c5', 11000], ['Flan de caramelo', 'c5', 8000],
+      ];
+      P.forEach(([n, c, p, k], i) => productos['p' + (i + 1)] = { nombre: n, categoriaId: c, precio: p, cocina: k !== false, activo: true, orden: i + 1 });
+    }
   }
-  return {
-    data: {
-      config: { general: { nombre, nit: '', direccion: '', telefono: '', pie: '¡Gracias por su visita!', ticketAncho: 80, imprimirComanda: false, propinaPct: 10, impuestoNombre: 'Impoconsumo', impuestoPct: 8, mostrarImpuesto: true, medios: ['Efectivo', 'Tarjeta', 'Nequi', 'Daviplata', 'Transferencia'], permisos: DEFAULT_PERMS } },
-      salas: { s1: { nombre: 'Salón principal', orden: 1 }, s2: { nombre: 'Terraza', orden: 2 } },
-      mesas, categorias: ejemplos ? categorias : {}, productos: ejemplos ? productos : {}, usuarios,
-    },
-    root: { nombre, creado: now() },
-  };
+  const usuarios = { u_admin: { nombre: 'Administrador', rol: 'admin', pin: await hashPin(adminPin, salt), activo: true, orden: 1 } };
+  if (usuariosEjemplo) {
+    usuarios.u_caja = { nombre: 'Laura (caja)', rol: 'cajero', pin: await hashPin('1111', salt), activo: true, orden: 2 };
+    usuarios.u_mes1 = { nombre: 'Carlos', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 3 };
+    usuarios.u_mes2 = { nombre: 'Andrea', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 4 };
+    usuarios.u_coc = { nombre: cfg.nombreCocina, rol: 'cocina', pin: await hashPin('3333', salt), activo: true, orden: 5 };
+  }
+  return { data: { config: { general: cfg }, salas, mesas, categorias, productos, usuarios }, root: { nombre, creado: now(), tipo } };
 }
+const DEMO_TIPO = () => new URLSearchParams(location.search).get('demo') === 'restaurante' ? 'restaurante' : 'bar';
 
 /* ---------------- íconos ---------------- */
 const IC = {
@@ -689,6 +723,7 @@ function loadDrafts() { try { S.drafts = JSON.parse(localStorage.getItem(DKEY())
 function saveDrafts() { try { localStorage.setItem(DKEY(), JSON.stringify(S.drafts)); } catch (e) { } }
 
 const byOrden = (a, b) => (a.orden ?? 999) - (b.orden ?? 999) || String(a.nombre).localeCompare(String(b.nombre), 'es', { numeric: true });
+const rolName = r => r === 'cocina' ? (S.cfg.nombreCocina || 'Cocina') : (ROLES[r] || r || '');
 const perm = k => !!S.user && (S.user.rol === 'admin' || !!(S.cfg?.permisos?.[S.user.rol]?.[k]));
 const ventas = () => Object.values(S.ventasMap);
 const gVenta = id => S.ventasMap[id];
@@ -765,7 +800,7 @@ async function afterLic() {
   if (licState().bloqueado) { S.user = null; S.screen = 'bloqueo'; render(); return; }
   try {
       if (!(await DB.hasNegocio())) {
-        if (DB.mode === 'local') { const sd = await buildSeed('Restaurante Demo', '1234', true); await DB.seed(sd.data, sd.root); }
+        if (DB.mode === 'local') { const t = DEMO_TIPO(); const sd = await buildSeed(t === 'bar' ? 'Bar Demo' : 'Restaurante Demo', '1234', true, t); await DB.seed(sd.data, sd.root); }
         else { S.screen = 'setup'; render(); return; }
       }
   } catch (e) { console.error(e); S.screen = 'fatal'; S.fatal = 'No se pudo leer el negocio: ' + (e.code || e.message); render(); return; }
@@ -912,7 +947,7 @@ function doRender() {
   for (const [id, v] of Object.entries(keep)) { const el = document.getElementById(id); if (el) el.value = v; }
   for (const [k, v] of Object.entries(scr)) { const el = root.querySelector(`[data-sk="${k}"]`); if (el) el.scrollTop = v; }
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); if (sel && sel[0] != null) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) { } } }
-  if (S.screen === 'app' && S.view === 'salon' && S.editPlano) bindPlano();
+  if (S.screen === 'app' && S.view === 'salon' && S.editPlano && !S.salonGrid) bindPlano();
 }
 
 function screenHTML() {
@@ -948,7 +983,8 @@ function setupHTML() {
   <div class="field"><label>Nombre del negocio</label><input class="inp" id="st_nombre" data-keep placeholder="Ej: Restaurante El Sabor"></div>
   <div class="grid2"><div class="field"><label>PIN del administrador</label><input class="inp" id="st_pin" data-keep inputmode="numeric" maxlength="4" placeholder="4 dígitos"></div>
   <div class="field"><label>Repite el PIN</label><input class="inp" id="st_pin2" data-keep inputmode="numeric" maxlength="4"></div></div>
-  <label class="chk"><input type="checkbox" id="st_ej" checked> Cargar menú de ejemplo (lo puedes borrar después)</label>
+  <div class="field"><label>Empezar con</label><select class="inp" id="st_tipo"><option value="bar">Ejemplo de bar: cervezas, botellas y micheladas con mesas</option><option value="restaurante">Ejemplo de restaurante: menú de comidas</option><option value="vacio">Sin productos (lo cargo yo o importo un Excel)</option></select></div>
+  <label class="chk"><input type="checkbox" id="st_us"> Crear usuarios de ejemplo (caja, 2 meseros y barra con PIN 1111, 2222 y 3333)</label>
   <button class="btn pri block lg" style="margin-top:12px" data-act="crearNegocio">Crear negocio</button>
   <button class="btn ghost block" style="margin-top:6px" data-act="logoutNegocio">Salir</button>
   <p class="small" style="color:var(--bad);margin-top:10px">${esc(S.setupErr || '')}</p>
@@ -964,8 +1000,8 @@ function pinHTML() {
     return `<div class="center"><div class="card login" style="max-width:560px">
     <div class="logo-big">${LOGO}<div><b>${APP_NAME}</b><div class="muted small">${neg}</div></div></div>
     <h2>¿Quién va a trabajar?</h2>
-    <div class="ulist">${us.map(u => `<button class="ubtn" data-act="pinUser" data-id="${u.id}">${avatar(u)}<span>${esc(u.nombre)}</span><span class="muted small" style="font-weight:500">${ROLES[u.rol] || u.rol}</span></button>`).join('')}</div>
-    ${DB.mode === 'local' ? '<p class="muted small" style="margin-top:16px">Demo · PIN: Administrador 1234 · Caja 1111 · Meseros 2222 · Cocina 3333</p>' : `<button class="btn ghost sm" style="margin-top:14px" data-act="logoutNegocio">Salir de la cuenta del negocio</button>`}
+    <div class="ulist">${us.map(u => `<button class="ubtn" data-act="pinUser" data-id="${u.id}">${avatar(u)}<span>${esc(u.nombre)}</span><span class="muted small" style="font-weight:500">${rolName(u.rol)}</span></button>`).join('')}</div>
+    ${DB.mode === 'local' ? `<p class="muted small" style="margin-top:16px">Demo · PIN: Administrador 1234 · Caja 1111 · Meseros 2222 · ${esc(S.cfg.nombreCocina || 'Cocina')} 3333</p>` : `<button class="btn ghost sm" style="margin-top:14px" data-act="logoutNegocio">Salir de la cuenta del negocio</button>`}
     </div></div>`;
   }
   const u = S.usuarios.find(x => x.id === PINST.userId);
@@ -997,14 +1033,14 @@ function appHTML() {
     pedidos: activePedidos().length,
     cocina: S.comandas.filter(c => c.estado === 'pendiente').length,
   };
-  const items = NAV.filter(([k]) => canView(k)).map(([k, l]) => `<button class="nb ${navOn === k ? 'on' : ''}" data-act="nav" data-v="${k}">${IC[k]}<span>${l}</span>${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('');
+  const items = NAV.filter(([k]) => canView(k)).map(([k, l]) => `<button class="nb ${navOn === k ? 'on' : ''}" data-act="nav" data-v="${k}">${IC[k]}<span>${k === 'cocina' ? esc(S.cfg.nombreCocina || 'Cocina') : l}</span>${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('');
   return `<div id="app"><nav class="nav"><div class="brand">${LOGO}<span>NEXORA</span></div>${items}<div class="sp"></div></nav><main data-sk="main">${viewHTML()}</main></div>`;
 }
 
 function topHTML(title, extra = '', back = '') {
   return `${DB.mode === 'local' ? '<div class="demo-bar">Modo demo · los datos quedan solo en este navegador. Configura Firebase para usarlo en varios equipos.</div>' : ''}${licBar()}
   <div class="top">${back ? `<button class="btn sm" data-act="${back}">${IC.back}</button>` : ''}<h1>${title}</h1>${extra}<div class="grow"></div>
-  <div class="uchip">${(ROLES[S.user.rol] || '') !== S.user.nombre ? `<span>${esc(ROLES[S.user.rol] || '')}</span>` : ''}<b>${esc(S.user.nombre)}</b><button data-act="logoutUser">Cambiar</button></div></div>`;
+  <div class="uchip">${(rolName(S.user.rol)) !== S.user.nombre ? `<span>${esc(rolName(S.user.rol))}</span>` : ''}<b>${esc(S.user.nombre)}</b><button data-act="logoutUser">Cambiar</button></div></div>`;
 }
 
 function viewHTML() {
@@ -1056,7 +1092,7 @@ A.crearNegocio = async () => {
   if (!/^\d{4}$/.test(p)) { S.setupErr = 'El PIN debe tener 4 números'; render(); return; }
   if (p !== p2) { S.setupErr = 'Los PIN no coinciden'; render(); return; }
   S.setupErr = 'Creando…'; render();
-  try { const sd = await buildSeed(n, p, false, $('#st_ej').checked); await DB.seed(sd.data, sd.root); S.setupErr = ''; startSubs(); }
+  try { const sd = await buildSeed(n, p, $('#st_us').checked, $('#st_tipo').value); await DB.seed(sd.data, sd.root); S.setupErr = ''; startSubs(); }
   catch (err) { console.error(err); S.setupErr = 'No se pudo crear: ' + (err.code || err.message); render(); }
 };
 A.pinUser = el => { PINST = { userId: el.dataset.id, digits: '', err: false }; render(); };
@@ -1087,6 +1123,9 @@ function vSalon() {
   const abiertas = ventasAbiertas().filter(v => v.tipo === 'mesa');
   const ocup = S.mesas.filter(m => ventaDeMesa(m.id)).length;
   const mesas = S.mesas.filter(m => m.salaId === S.salaId);
+  const salaAct = salas.find(s => s.id === S.salaId) || {};
+  const grid = salaAct.vista === 'cuadricula' || (salaAct.vista !== 'plano' && mesas.length > 24);
+  S.salonGrid = grid;
   const occSala = sid => S.mesas.filter(m => m.salaId === sid && ventaDeMesa(m.id)).length;
   const ed = S.editPlano;
   return topHTML('Salón', `<span class="tag warn">${ocup}/${S.mesas.length} ocupadas</span><span class="tag">${money(sum(abiertas, v => calc(v).total))} en mesas</span>`) + `
@@ -1096,8 +1135,8 @@ function vSalon() {
       ${perm('ajustes') ? `<button class="btn sm ${ed ? 'pri' : ''}" data-act="editPlano">${ed ? 'Terminar edición' : 'Editar plano'}</button>${ed ? '<button class="btn sm" data-act="addMesa">+ Mesa</button>' : ''}` : ''}
       <div class="legend"><span><i style="background:#fff;border:2px solid #bfe5cc"></i>Libre</span><span><i style="background:var(--warn2);border:2px solid #f3c46e"></i>Ocupada</span><span><i style="background:var(--info2);border:2px solid #8fb6f3"></i>Precuenta</span></div>
     </div>
-    <div class="plano ${ed ? 'edit' : ''}" id="plano">${mesas.map(mesaHTML).join('') || '<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">Esta sala no tiene mesas</div>'}</div>
-    ${ed ? '<p class="muted small" style="margin-top:8px">Arrastra las mesas para ubicarlas (en computador o tablet). Toca una mesa para cambiarle el nombre, la forma o eliminarla.</p>' : ''}
+    <div class="plano ${ed ? 'edit' : ''} ${grid ? 'grid' : ''}" id="plano">${mesas.map(mesaHTML).join('') || '<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">Esta sala no tiene mesas</div>'}</div>
+    ${ed ? `<p class="muted small" style="margin-top:8px">${grid ? 'Esta sala se muestra en cuadrícula. Toca una mesa para cambiarle el nombre o eliminarla. Para agregar varias usa Ajustes → Salas y mesas.' : 'Arrastra las mesas para ubicarlas (en computador o tablet). Toca una mesa para cambiarle el nombre, la forma o eliminarla.'}</p>` : ''}
   </div>`;
 }
 
@@ -1174,7 +1213,7 @@ A.delMesa = () => {
 function meserosOptions(sel) {
   const us = S.usuarios.filter(u => u.activo && (u.rol === 'admin' || (S.cfg.permisos?.[u.rol] || {}).salon));
   us.sort((a, b) => (a.rol === 'mesero' ? 0 : 1) - (b.rol === 'mesero' ? 0 : 1) || a.nombre.localeCompare(b.nombre));
-  return `<option value="">Sin mesero</option>` + us.map(u => `<option value="${u.id}" ${u.id === sel ? 'selected' : ''}>${esc(u.nombre)}${u.rol !== 'mesero' ? ' (' + ROLES[u.rol] + ')' : ''}</option>`).join('');
+  return `<option value="">Sin mesero</option>` + us.map(u => `<option value="${u.id}" ${u.id === sel ? 'selected' : ''}>${esc(u.nombre)}${u.rol !== 'mesero' ? ' (' + rolName(u.rol) + ')' : ''}</option>`).join('');
 }
 function defaultMesero() {
   if (S.user.rol === 'mesero') return S.user.id;
@@ -1285,15 +1324,25 @@ function vPedido() {
 
 A.cat = el => { S.catId = el.dataset.id; render(); };
 A.showAcct = el => { S.showAcct = el.dataset.v === '1'; render(); };
+/* productos con opciones (sabores): pregunta cuál antes de agregar */
+function pedirOpcion(p, cb) {
+  if (!p.opciones || !p.opciones.length) { cb(''); return; }
+  MODAL = { type: 'opcion', cb };
+  openModal(`${mHead(esc(p.nombre) + ' · ¿qué sabor?')}<div class="mb" style="padding-bottom:18px"><div class="opgrid">${p.opciones.map(o => `<button class="btn lg" data-act="opElegir" data-t="${esc(o)}">${esc(o)}</button>`).join('')}</div></div>`);
+}
+A.opElegir = el => { const cb = MODAL && MODAL.cb; closeModal(); if (cb) cb(el.dataset.t); };
 A.addProd = el => {
   const v = gVenta(S.ventaId), p = gProd(el.dataset.id);
   if (!v || v.estado !== 'abierta' || !p) return;
-  const d = S.drafts[v.id] = S.drafts[v.id] || [];
-  const ex = d.find(i => i.productoId === p.id && !i.nota);
-  if (ex) ex.cant++;
-  else d.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: '', cocina: p.cocina !== false });
-  saveDrafts(); render();
+  pedirOpcion(p, op => agregarDraft(v, p, op));
 };
+function agregarDraft(v, p, op) {
+  const d = S.drafts[v.id] = S.drafts[v.id] || [];
+  const ex = d.find(i => i.productoId === p.id && (i.nota || '') === op);
+  if (ex) ex.cant++;
+  else d.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: op || '', cocina: p.cocina !== false });
+  saveDrafts(); render();
+}
 A.dq = el => {
   const d = S.drafts[S.ventaId] || []; const i = d.find(x => x.id === el.dataset.id); if (!i) return;
   i.cant += parseInt(el.dataset.d, 10);
@@ -1637,7 +1686,7 @@ function vCocina() {
         (c.estado === 'pendiente' ? `<button class="btn" style="flex:1" data-act="comEstado" data-id="${c.id}" data-e="preparando">Empezar</button>` : '') + `<button class="btn ok" style="flex:1" data-act="comEstado" data-id="${c.id}" data-e="listo">Listo</button>`}</div>
     </div>`;
   };
-  return topHTML('Cocina', `<span class="tag warn">${act.filter(c => c.estado === 'pendiente').length} por empezar</span><span class="tag">${act.filter(c => c.estado === 'preparando').length} preparando</span>`) + `<div class="wrap">
+  return topHTML(esc(S.cfg.nombreCocina || 'Cocina'), `<span class="tag warn">${act.filter(c => c.estado === 'pendiente').length} por empezar</span><span class="tag">${act.filter(c => c.estado === 'preparando').length} preparando</span>`) + `<div class="wrap">
     <div class="row" style="margin-bottom:14px"><button class="btn sm" data-act="toggleSound">${S.sound ? '🔔 Sonido activado' : '🔕 Sonido apagado'}</button><span class="muted small">Las comandas se ponen rojas después de 15 minutos.</span></div>
     ${act.length ? `<div class="kds">${act.map(card).join('')}</div>` : '<div class="card empty">No hay comandas pendientes 👌</div>'}
     ${listos.length ? `<h3 class="sec-t" style="margin-top:24px">Despachadas recientemente</h3><div class="card pad">${listos.map(c => `<div class="list-row"><span><b>${esc(c.titulo)}</b> <span class="muted">· ${c.items.map(i => i.cant + ' ' + esc(i.nombre)).join(', ')}</span></span><span class="row"><span class="muted small">${hhmm(c.listoEn)}</span><button class="btn sm" data-act="comEstado" data-id="${c.id}" data-e="preparando">Deshacer</button></span></div>`).join('')}</div>` : ''}
@@ -1908,6 +1957,7 @@ A.editProd = el => {
     <div class="grid2 ${p && p.controlStock ? '' : 'hidden'}" id="pr_stk"><div class="field"><label>Stock actual</label><input class="inp" id="pr_st" type="number" step="any" value="${p && p.stock != null ? p.stock : ''}"></div>
     <div class="field"><label>Avisar cuando queden</label><input class="inp" id="pr_min" type="number" min="0" value="${p && p.stockMin ? p.stockMin : ''}" placeholder="Ej: 6"></div></div>
     <label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina / barra (aparece en la comanda)</label>
+    <div class="field" style="margin-top:6px"><label>Opciones para escoger al vender (opcional)</label><input class="inp" id="pr_op" value="${esc(p && p.opciones ? p.opciones.join(', ') : '')}" placeholder="Ej: Frutos rojos, Mango biche, Fresa"><span class="muted small">Separa con comas. Al vender, la app pregunta cuál.</span></div>
     <label class="chk"><input type="checkbox" id="pr_a" ${!p || p.activo !== false ? 'checked' : ''}> Activo (disponible para vender)</label>
   </div><div class="mf">${p ? '<button class="btn bad" data-act="delProd" style="margin-right:auto">Eliminar</button>' : ''}<button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveProd" data-primary>Guardar</button></div>`);
 };
@@ -1915,7 +1965,7 @@ A.saveProd = () => {
   const n = $('#pr_n').value.trim(); let pr = parseMoney($('#pr_p').value); if (pr > 0 && pr < 1000) pr *= 1000;
   if (!n) return toast('Escribe el nombre', 'err');
   if (!(pr > 0)) return toast('Escribe el precio', 'err');
-  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked };
+  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked, opciones: $('#pr_op').value.split(',').map(x => x.trim()).filter(Boolean) };
   if ($('#pr_cost')) { let c = parseMoney($('#pr_cost').value); if (c > 0 && c < 1000 && pr >= 1000) c *= 1000; d.costo = c; }
   d.stockMin = Math.max(0, parseFloat($('#pr_min').value) || 0);
   const old = MODAL.id ? gProd(MODAL.id) : null;
@@ -1963,20 +2013,21 @@ function vAjustes() {
     <div class="field"><label>Teléfono</label><input class="inp" id="aj_tel" data-keep value="${esc(c.telefono || '')}"></div></div>
     <div class="field"><label>Dirección</label><input class="inp" id="aj_dir" data-keep value="${esc(c.direccion || '')}"></div>
     <div class="field"><label>Mensaje al final del tiquete</label><input class="inp" id="aj_pie" data-keep value="${esc(c.pie || '')}"></div>
+    <div class="field"><label>Nombre de la pantalla de preparación</label><select class="inp" id="aj_coc" data-keep>${['Cocina', 'Barra', 'Cocina y barra'].map(o => `<option ${(c.nombreCocina || 'Cocina') === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
     <div class="grid2"><div class="field"><label>Ancho de la impresora</label><select class="inp" id="aj_ancho" data-keep><option value="80">80 mm</option><option value="58" ${Number(c.ticketAncho) === 58 ? 'selected' : ''}>58 mm</option></select></div></div>
     <label class="chk"><input type="checkbox" id="aj_com" ${c.imprimirComanda ? 'checked' : ''}> Imprimir la comanda al enviar el pedido a cocina</label>
     <button class="btn pri" style="margin-top:12px" data-act="saveNegocio">Guardar</button></div>`;
   if (t === 'salas') body = `<div class="card pad" style="max-width:720px">
     <div class="row between" style="margin-bottom:6px"><h3 class="sec-t" style="margin:0">Salas</h3><div class="row"><button class="btn sm" data-act="goPlano">Editar plano</button><button class="btn sm pri" data-act="editSala">+ Sala</button></div></div>
-    ${S.salas.map(s => { const n = S.mesas.filter(m => m.salaId === s.id).length; return `<div class="list-row"><span><b>${esc(s.nombre)}</b> <span class="muted">· ${n} mesas</span></span><span class="row"><button class="btn sm" data-act="addMesas" data-id="${s.id}">+ Mesas</button><button class="btn sm" data-act="editSala" data-id="${s.id}">Editar</button></span></div>`; }).join('') || '<p class="muted">No hay salas</p>'}
+    ${S.salas.map(s => { const n = S.mesas.filter(m => m.salaId === s.id).length; return `<div class="list-row"><span><b>${esc(s.nombre)}</b> <span class="muted">· ${n} mesas</span></span><span class="row"><button class="btn sm" data-act="addMesas" data-id="${s.id}">Armar mesas</button><button class="btn sm" data-act="editSala" data-id="${s.id}">Editar</button></span></div>`; }).join('') || '<p class="muted">No hay salas</p>'}
     <p class="muted small" style="margin-top:12px">Para mover mesas, cambiarles el nombre o eliminarlas usa "Editar plano" en el Salón.</p></div>`;
   if (t === 'usuarios') body = `<div class="card" style="max-width:760px;overflow:auto"><div class="row between pad" style="padding-bottom:8px"><h3 class="sec-t" style="margin:0">Usuarios</h3><button class="btn sm pri" data-act="editUser">+ Usuario</button></div>
     <table class="tbl"><thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th></tr></thead><tbody>
-    ${S.usuarios.map(u => `<tr class="click" data-act="editUser" data-id="${u.id}"><td><div class="row">${avatar(u, 32)}<b>${esc(u.nombre)}</b></div></td><td>${ROLES[u.rol] || u.rol}</td><td>${u.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag">Inactivo</span>'}</td></tr>`).join('')}
+    ${S.usuarios.map(u => `<tr class="click" data-act="editUser" data-id="${u.id}"><td><div class="row">${avatar(u, 32)}<b>${esc(u.nombre)}</b></div></td><td>${rolName(u.rol)}</td><td>${u.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag">Inactivo</span>'}</td></tr>`).join('')}
     </tbody></table><p class="muted small pad">Cada persona entra con su PIN de 4 números. Lo que haga queda registrado con su nombre.</p></div>`;
   if (t === 'permisos') {
     const p = c.permisos || {};
-    body = `<div class="card" style="max-width:760px;overflow:auto"><table class="tbl"><thead><tr><th>Permiso</th><th style="text-align:center">Admin</th><th style="text-align:center">Cajero</th><th style="text-align:center">Mesero</th><th style="text-align:center">Cocina</th></tr></thead><tbody>
+    body = `<div class="card" style="max-width:760px;overflow:auto"><table class="tbl"><thead><tr><th>Permiso</th><th style="text-align:center">Admin</th><th style="text-align:center">Cajero</th><th style="text-align:center">Mesero</th><th style="text-align:center">${esc(rolName('cocina'))}</th></tr></thead><tbody>
     ${PERMS.map(([k, l]) => `<tr><td>${l}</td><td style="text-align:center"><input type="checkbox" checked disabled style="width:19px;height:19px"></td>${['cajero', 'mesero', 'cocina'].map(r => `<td style="text-align:center"><input type="checkbox" style="width:19px;height:19px;accent-color:var(--accent)" data-ch="perm" data-r="${r}" data-k="${k}" ${(p[r] || {})[k] ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
     </tbody></table><p class="muted small pad">El administrador siempre tiene todos los permisos. Los cambios aplican de inmediato en todos los equipos.</p></div>`;
   }
@@ -1996,7 +2047,8 @@ function vAjustes() {
     ${DB.mode === 'firebase' ? `<div class="list-row"><span>Cuenta del negocio</span><b>${esc(S.authEmail || '')}</b></div>` : ''}
     <div class="list-row"><span>Versión</span><b>Piloto fase 1</b></div>
     <p class="muted small" style="margin:12px 0">Para usarlo en el celular de los meseros: abre el link en Chrome y elige "Agregar a la pantalla principal".</p>
-    ${DB.mode === 'local' ? '<button class="btn bad" data-act="resetDemo">Borrar datos de demostración</button>' : '<button class="btn bad" data-act="logoutNegocioConf">Cerrar la cuenta del negocio en este equipo</button>'}</div>`;
+    <div class="row wrap">${DB.mode === 'local' ? '<button class="btn bad" data-act="resetDemo">Borrar datos de demostración</button>' : '<button class="btn" data-act="logoutNegocioConf">Cerrar la cuenta del negocio en este equipo</button>'}
+    ${S.user.rol === 'admin' ? '<button class="btn bad" data-act="reiniciarNeg">Reiniciar el negocio (borrar todo)</button>' : ''}</div></div>`;
   return topHTML('Ajustes') + `<div class="wrap"><div class="tabs" style="margin-bottom:16px">${AJT.map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="ajTab" data-t="${k}">${l}</button>`).join('')}</div>${body}</div>`;
 }
 function licCardHTML() {
@@ -2020,7 +2072,7 @@ A.ajTab = el => { S.ajTab = el.dataset.t; render(); };
 A.goAjustes = el => { S.view = 'ajustes'; S.ajTab = el.dataset.tab || 'negocio'; render(); };
 A.goPlano = () => { S.view = 'salon'; S.editPlano = true; render(); };
 A.saveNegocio = () => {
-  DB.update('config', 'general', { nombre: $('#aj_nombre').value.trim(), nit: $('#aj_nit').value.trim(), telefono: $('#aj_tel').value.trim(), direccion: $('#aj_dir').value.trim(), pie: $('#aj_pie').value.trim(), ticketAncho: parseInt($('#aj_ancho').value, 10), imprimirComanda: $('#aj_com').checked });
+  DB.update('config', 'general', { nombre: $('#aj_nombre').value.trim(), nit: $('#aj_nit').value.trim(), telefono: $('#aj_tel').value.trim(), direccion: $('#aj_dir').value.trim(), pie: $('#aj_pie').value.trim(), nombreCocina: $('#aj_coc').value, ticketAncho: parseInt($('#aj_ancho').value, 10), imprimirComanda: $('#aj_com').checked });
   toast('Guardado', 'ok');
 };
 A.savePagos = () => {
@@ -2037,12 +2089,14 @@ A.delMedio = el => DB.update('config', 'general', { medios: medios().filter(m =>
 A.editSala = el => {
   const s = el.dataset.id ? S.salas.find(x => x.id === el.dataset.id) : null;
   MODAL = { type: 'sala', id: s ? s.id : null };
-  openModal(`${mHead(s ? 'Editar sala' : 'Nueva sala')}<div class="mb"><div class="field"><label>Nombre</label><input class="inp" id="sl_n" value="${esc(s ? s.nombre : '')}" placeholder="Ej: Segundo piso" autofocus></div></div>
+  openModal(`${mHead(s ? 'Editar sala' : 'Nueva sala')}<div class="mb"><div class="field"><label>Nombre</label><input class="inp" id="sl_n" value="${esc(s ? s.nombre : '')}" placeholder="Ej: Segundo piso" autofocus></div>
+    <div class="field"><label>Cómo se ven las mesas</label><select class="inp" id="sl_v"><option value="">Automático (cuadrícula si son más de 24)</option><option value="cuadricula" ${s && s.vista === 'cuadricula' ? 'selected' : ''}>Cuadrícula (botones con el número)</option><option value="plano" ${s && s.vista === 'plano' ? 'selected' : ''}>Plano (las ubicas arrastrándolas)</option></select></div></div>
   <div class="mf">${s ? '<button class="btn bad" data-act="delSala" style="margin-right:auto">Eliminar</button>' : ''}<button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveSala" data-primary>Guardar</button></div>`);
 };
 A.saveSala = () => {
   const n = $('#sl_n').value.trim(); if (!n) return toast('Escribe el nombre', 'err');
-  if (MODAL.id) DB.update('salas', MODAL.id, { nombre: n }); else DB.add('salas', { nombre: n, orden: S.salas.length + 1 });
+  const vista = $('#sl_v').value;
+  if (MODAL.id) DB.update('salas', MODAL.id, { nombre: n, vista }); else DB.add('salas', { nombre: n, vista, orden: S.salas.length + 1 });
   closeModal();
 };
 A.delSala = () => {
@@ -2051,28 +2105,50 @@ A.delSala = () => {
   confirmBox('Eliminar sala', '¿Eliminar esta sala?', 'Eliminar', () => DB.del('salas', id), true);
 };
 A.addMesas = el => {
-  MODAL = { type: 'addMesas', salaId: el.dataset.id };
-  openModal(`${mHead('Agregar mesas')}<div class="mb">
-    <div class="grid2"><div class="field"><label>Cantidad</label><input class="inp" id="am_n" type="number" min="1" max="40" value="4" autofocus></div>
-    <div class="field"><label>Prefijo del nombre</label><input class="inp" id="am_p" placeholder="Ej: B (queda B1, B2…)"></div></div>
+  const sid = el.dataset.id; const sala = S.salas.find(s => s.id === sid) || {};
+  const ms = S.mesas.filter(m => m.salaId === sid);
+  const libres = ms.filter(m => !ventaDeMesa(m.id)).length;
+  MODAL = { type: 'addMesas', salaId: sid };
+  openModal(`${mHead('Armar mesas · ' + esc(sala.nombre || ''))}<div class="mb">
+    <p class="muted small" style="margin-bottom:10px">Hoy tiene ${ms.length} mesas${ms.length ? ': ' + esc(ms.slice().sort(byOrden).slice(0, 12).map(m => m.nombre).join(', ')) + (ms.length > 12 ? '…' : '') : ''}.</p>
+    <div class="field"><label>Números de mesa que quieres agregar</label><input class="inp" id="am_r" placeholder="Ej: 1-12, 21-80" autofocus>
+    <span class="muted small">Usa rangos con guion y separa con comas. También sirve con letras: T1-T4, Barra.</span></div>
     <div class="field"><label>Forma</label><select class="inp" id="am_f"><option value="cuadrada">Cuadrada</option><option value="redonda">Redonda</option></select></div>
-  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveMesas" data-primary>Agregar</button></div>`);
+    ${libres ? `<label class="chk"><input type="checkbox" id="am_del"> Borrar primero las ${libres} mesas libres que tiene ahora</label>` : ''}
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveMesas" data-primary>Guardar mesas</button></div>`);
 };
+function parseMesas(txt) {
+  const out = [];
+  String(txt || '').split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+    const m = t.match(/^([A-Za-zÁÉÍÓÚÑáéíóúñ]*)\s*(\d+)\s*-\s*([A-Za-zÁÉÍÓÚÑáéíóúñ]*)\s*(\d+)$/);
+    if (m) { const a = +m[2], b = +m[4], lo = Math.min(a, b), hi = Math.max(a, b); if (hi - lo > 300) return; for (let n = lo; n <= hi; n++) out.push(m[1] + n); }
+    else out.push(t);
+  });
+  return [...new Set(out)];
+}
 A.saveMesas = () => {
-  const n = Math.min(40, Math.max(1, parseInt($('#am_n').value, 10) || 0)); const pre = $('#am_p').value.trim(); const f = $('#am_f').value;
-  const sid = MODAL.salaId; const ex = S.mesas.filter(m => m.salaId === sid).length;
-  for (let i = 0; i < n; i++) {
-    const k = ex + i;
-    DB.add('mesas', { nombre: pre + (pre ? (i + 1) : (k + 1)), salaId: sid, x: 4 + (k % 6) * 15.5, y: 5 + (Math.floor(k / 6) % 5) * 19, forma: f, orden: k + 1 });
-  }
-  closeModal(); toast(n + ' mesas agregadas', 'ok');
+  const sid = MODAL.salaId, f = $('#am_f').value;
+  const nombres = parseMesas($('#am_r').value);
+  if (!nombres.length) return toast('Escribe los números de mesa, por ejemplo 1-12, 21-80', 'err');
+  if (nombres.length > 300) return toast('Máximo 300 mesas a la vez', 'err');
+  const del = $('#am_del') && $('#am_del').checked;
+  let quedan = S.mesas.filter(m => m.salaId === sid);
+  if (del) { quedan.filter(m => !ventaDeMesa(m.id)).forEach(m => DB.del('mesas', m.id)); quedan = quedan.filter(m => ventaDeMesa(m.id)); }
+  const existe = new Set(S.mesas.filter(m => m.salaId === sid && (!del || ventaDeMesa(m.id))).map(m => norm(m.nombre)));
+  let k = quedan.length, n = 0;
+  nombres.forEach(nm => {
+    if (existe.has(norm(nm))) return;
+    DB.add('mesas', { nombre: nm, salaId: sid, x: 4 + (k % 6) * 15.5, y: 5 + (Math.floor(k / 6) % 5) * 19, forma: f, orden: parseInt(nm.replace(/\D/g, ''), 10) || 999 });
+    k++; n++;
+  });
+  closeModal(); toast(`${n} mesas agregadas${del ? ' (se borraron las anteriores libres)' : ''}`, 'ok');
 };
 A.editUser = el => {
   const u = el.dataset.id ? S.usuarios.find(x => x.id === el.dataset.id) : null;
   MODAL = { type: 'user', id: u ? u.id : null };
   openModal(`${mHead(u ? 'Editar usuario' : 'Nuevo usuario')}<div class="mb">
     <div class="field"><label>Nombre</label><input class="inp" id="us_n" value="${esc(u ? u.nombre : '')}" autofocus></div>
-    <div class="grid2"><div class="field"><label>Rol</label><select class="inp" id="us_r">${Object.entries(ROLES).map(([k, l]) => `<option value="${k}" ${u && u.rol === k ? 'selected' : (!u && k === 'mesero' ? 'selected' : '')}>${l}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="field"><label>Rol</label><select class="inp" id="us_r">${Object.keys(ROLES).map(k => [k, rolName(k)]).map(([k, l]) => `<option value="${k}" ${u && u.rol === k ? 'selected' : (!u && k === 'mesero' ? 'selected' : '')}>${l}</option>`).join('')}</select></div>
     <div class="field"><label>PIN (4 números)</label><input class="inp" id="us_p" inputmode="numeric" maxlength="4" placeholder="${u ? 'Vacío = no cambiar' : '4 dígitos'}"></div></div>
     <label class="chk"><input type="checkbox" id="us_a" ${!u || u.activo ? 'checked' : ''}> Activo</label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveUser" data-primary>Guardar</button></div>`);
@@ -2087,6 +2163,24 @@ A.saveUser = async () => {
   if (p) d.pin = await hashPin(p, DB.nid);
   if (MODAL.id) DB.update('usuarios', MODAL.id, d); else DB.add('usuarios', { ...d, orden: S.usuarios.length + 1 });
   closeModal(); toast('Usuario guardado', 'ok');
+};
+A.reiniciarNeg = () => {
+  MODAL = { type: 'reiniciar' };
+  openModal(`${mHead('Reiniciar el negocio')}<div class="mb">
+    <p>Se borran <b>todos</b> los datos de este negocio: productos, mesas, usuarios, ventas, caja e inventario. Después la app te pide crear el negocio otra vez, con el ejemplo de bar, de restaurante o vacío.</p>
+    <p class="small" style="color:var(--bad);margin:10px 0">Esto no se puede deshacer. Úsalo solo para demos o para empezar de cero.</p>
+    <div class="field"><label>Escribe BORRAR para confirmar</label><input class="inp" id="rn_c" autocomplete="off"></div>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn bad" data-act="confReiniciar">Borrar todo</button></div>`);
+};
+A.confReiniciar = async () => {
+  if ($('#rn_c').value.trim().toUpperCase() !== 'BORRAR') return toast('Escribe BORRAR para confirmar', 'err');
+  const b = $('#modal .btn.bad'); if (b) { b.disabled = true; b.textContent = 'Borrando…'; }
+  try {
+    stopSubs();
+    await DB.wipe(['config', 'usuarios', 'salas', 'mesas', 'categorias', 'productos', 'ventas', 'comandas', 'arqueos', 'movimientos', 'clientes', 'invmov']);
+    localStorage.removeItem('nexorapos_session'); localStorage.removeItem('nexorapos_drafts_' + DB.nid); localStorage.removeItem('nexorapos_cart_' + DB.nid);
+    location.reload();
+  } catch (e) { console.error(e); toast('No se pudo borrar todo: ' + (e.code || e.message), 'err'); if (b) { b.disabled = false; b.textContent = 'Borrar todo'; } }
 };
 A.resetDemo = () => confirmBox('Borrar datos de demostración', 'Se borran todas las ventas, productos y ajustes de esta demo y se vuelve a cargar el ejemplo.', 'Borrar todo', () => DB.resetDemo(), true);
 A.logoutNegocioConf = () => confirmBox('Cerrar la cuenta del negocio', 'Este equipo dejará de estar conectado. Para volver a entrar necesitas el correo y la contraseña del negocio.', 'Cerrar', () => A.logoutNegocio(), true);
@@ -2618,7 +2712,7 @@ async function loadXLSX() {
   for (const u of XLSX_URLS) { try { XLSXmod = await import(u); return XLSXmod; } catch (e) { console.warn('No cargó', u, e); } }
   throw new Error('No se pudo cargar el lector de Excel. Revisa la conexión a internet.');
 }
-const IMP_CAMPOS = [['nombre', 'Producto *'], ['precio', 'Precio de venta *'], ['costo', 'Costo'], ['stock', 'Stock'], ['categoria', 'Categoría'], ['stockMin', 'Stock mínimo'], ['comanda', 'Va a comanda (Sí/No)']];
+const IMP_CAMPOS = [['nombre', 'Producto *'], ['precio', 'Precio de venta *'], ['costo', 'Costo'], ['stock', 'Stock'], ['categoria', 'Categoría'], ['stockMin', 'Stock mínimo'], ['comanda', 'Va a comanda (Sí/No)'], ['opciones', 'Opciones / sabores']];
 const IMP_RX = {
   nombre: /^(producto|productos|nombre|descripcion|articulo|item|referencia)/,
   precio: /^(precio\s*(de\s*)?venta|pvp|precio|valor\s*venta|precio\s*unitario)$/,
@@ -2627,6 +2721,7 @@ const IMP_RX = {
   categoria: /categor|grupo|familia|seccion|^tipo/,
   stockMin: /minimo|^min\b/,
   comanda: /comanda|cocina|barra|prepara/,
+  opciones: /opcion|sabor|variante/,
 };
 const colLetter = c => { let s = ''; c++; while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
 function toNum(v) {
@@ -2675,6 +2770,7 @@ function impRows() {
       nombre, precio: Math.round(precio), costo: Math.round(toNum(cell(r, 'costo')) || 0), stock: st, stockMin: toNum(cell(r, 'stockMin')) || 0,
       categoria: String(cell(r, 'categoria') ?? '').trim(),
       comanda: m.comanda < 0 ? true : (cm != null && /^(si|s|x|1|true|yes)$/.test(norm(cm).trim())),
+      opciones: String(cell(r, 'opciones') ?? '').split(',').map(x => x.trim()).filter(Boolean),
     });
   });
   const rows = [...out.values()];
@@ -2683,7 +2779,7 @@ function impRows() {
 }
 function impHTML() {
   if (!IMP || IMP.step === 1) return `${mHead('Importar productos desde Excel')}<div class="mb">
-    <p style="margin-bottom:10px">Sube el archivo de Excel (.xlsx) o .csv con tus productos. La app reconoce estas columnas: <b>Producto, Precio de venta, Costo, Stock, Categoría, Stock mínimo y Comanda</b>. No importa el orden: después te deja revisar qué columna es cada cosa.</p>
+    <p style="margin-bottom:10px">Sube el archivo de Excel (.xlsx) o .csv con tus productos. La app reconoce estas columnas: <b>Producto, Precio de venta, Costo, Stock, Categoría, Stock mínimo, Comanda y Opciones</b>. No importa el orden: después te deja revisar qué columna es cada cosa.</p>
     <div class="field"><input class="inp" type="file" id="imp_file" data-ch="impFile" accept=".xlsx,.xls,.csv"></div>
     ${IMP && IMP.err ? `<p class="small" style="color:var(--bad)">${esc(IMP.err)}</p>` : ''}${IMP && IMP.loading ? '<p class="muted small">Leyendo el archivo…</p>' : ''}
     <p class="muted small">¿No tienes el archivo armado? <button class="lnk" data-act="impPlantilla">Descarga la plantilla</button>, llénala y súbela.</p>
@@ -2741,6 +2837,7 @@ A.impImportar = () => {
   let nNew = 0, nUpd = 0, po = prodAntes.length;
   rows.forEach(r => {
     const d = { nombre: r.nombre, precio: r.precio, costo: r.costo, cocina: r.comanda, activo: true };
+    if (IMP.map.opciones >= 0) d.opciones = r.opciones;
     if (r.stock != null) { d.controlStock = true; d.stock = r.stock; d.stockMin = r.stockMin || 0; }
     if (r.existe) {
       if (!upd) { usadas.add(r.existe.categoriaId); return; }
@@ -2809,10 +2906,12 @@ A.vCat = el => { S.vCat = el.dataset.id; render(); };
 A.vShow = el => { S.vShowCart = el.dataset.v === '1'; render(); };
 A.vAdd = el => {
   const p = gProd(el.dataset.id); if (!p) return;
-  const ex = S.cart.find(i => i.productoId === p.id && !i.nota);
-  if (ex) ex.cant++;
-  else S.cart.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: '', cocina: p.cocina !== false });
-  saveCart(); render();
+  pedirOpcion(p, op => {
+    const ex = S.cart.find(i => i.productoId === p.id && (i.nota || '') === op);
+    if (ex) ex.cant++;
+    else S.cart.push({ id: uid(), productoId: p.id, nombre: p.nombre, precio: p.precio, costo: Number(p.costo) || 0, cant: 1, nota: op || '', cocina: p.cocina !== false });
+    saveCart(); render();
+  });
 };
 A.vq = el => {
   const i = S.cart.find(x => x.id === el.dataset.id); if (!i) return;
