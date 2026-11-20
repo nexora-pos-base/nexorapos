@@ -61,7 +61,7 @@ main{flex:1;min-width:0;overflow:auto;display:flex;flex-direction:column}
 .muted{color:var(--muted)}
 .small{font-size:13px}
 .row{display:flex;align-items:center;gap:10px}
-.row.wrap{flex-wrap:wrap}
+.row.wrap{flex-wrap:wrap;padding:0}
 .between{justify-content:space-between}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -284,10 +284,11 @@ textarea.inp{min-height:70px;resize:vertical}
   .grid2,.grid3{grid-template-columns:1fr}
   .uchip span{display:none}
   .top{flex-wrap:nowrap;gap:8px}
-  .top h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .top h1{white-space:nowrap;flex-shrink:0;max-width:45vw;overflow:hidden;text-overflow:ellipsis}
+  .top .btn.sm{padding:0 9px}
   .top .tag{display:none}
-  .uchip{padding:3px 3px 3px 10px;flex:none}
-  .uchip b{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .uchip{padding:3px 3px 3px 10px;flex:0 1 auto;min-width:0}
+  .uchip b{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #toast{bottom:84px}
   .mtabs .tag{display:inline-flex;font-size:10.5px;padding:2px 6px}
 }
@@ -331,6 +332,23 @@ a.btn{text-decoration:none}
   #print.a4 hr{border-top:1px solid #000;margin:10px 0}
 }
 
+.ie-hl{display:none}
+@media (max-width:640px){
+  .ie-tbl thead{display:none}
+  .ie-tbl tr{display:grid;grid-template-columns:62px minmax(0,1fr) 98px;gap:6px 8px;padding:10px;border-bottom:1px solid var(--line);align-items:center}
+  .imp-prev .ie-tbl td{padding:0;border:0;font-size:14px}
+  .ie-tbl td.ie-n{grid-column:1/3;font-weight:650}
+  .ie-tbl td.ie-h{grid-column:3;text-align:right;color:var(--muted)}
+  .ie-hl{display:inline}
+  .ie-tbl td.ie-q input,.ie-tbl td.ie-m select,.ie-tbl td.ie-c input{width:100%!important}
+  .ie-tbl td.ie-m{text-align:center}
+  .ie-tbl td.ie-m select{padding:4px 4px!important;font-size:13px}
+  .ie-tbl td.ie-q input{padding:6px 8px}
+  .ie-tbl td.ie-c{text-align:right}
+  .ie-tbl td.ie-c .small{text-align:right}
+  .ie-tbl td.ie-t{grid-column:1/-1;text-align:right;font-size:12px;line-height:1}
+}
+
 </style>
 </head>
 <body>
@@ -340,7 +358,7 @@ a.btn{text-decoration:none}
 <div id="print"></div>
 <script type="module">
 /* Ejemplo de bar: productos del inventario de AC Boutique (semana NOVIEMBRE 13-16) */
-const BAR_EJEMPLO = [{"nombre": "Águila Original", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2083, "stock": 56, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Costeña", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 1875, "stock": 61, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Águila Light", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 1958, "stock": 9, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Costeñita", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2026, "stock": 236, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Póker", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2833, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Budweiser", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2500, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Club Colombia", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 18, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Heineken", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2583, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Stella", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 35, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Smirnoff", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 8000, "stock": 17, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Coronita", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2916, "stock": 56, "min": 24, "comanda": false, "opciones": []}, {"nombre": "Electrolit", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 6583, "stock": 20, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Soda Bretaña", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2416, "stock": 10, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Agua", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 750, "stock": 22, "min": 12, "comanda": false, "opciones": []}, {"nombre": "Gatorade", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3333, "stock": 8, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Coca Cola", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2500, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Czechvar", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 9733, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Liefmans", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 13722, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "BBC", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 4747, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Aguardiente G", "cat": "Botellas", "precio": 125000, "costo": 94000, "stock": 3, "min": 3, "comanda": false, "opciones": []}, {"nombre": "Aguardiente Limo", "cat": "Botellas", "precio": 80000, "costo": 58000, "stock": 9, "min": 6, "comanda": false, "opciones": []}, {"nombre": "Medellín G", "cat": "Botellas", "precio": 135000, "costo": 113000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "8 Años", "cat": "Botellas", "precio": 110000, "costo": 70000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Medellín Limo", "cat": "Botellas", "precio": 85000, "costo": 59000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas Litro", "cat": "Botellas", "precio": 85000, "costo": 53000, "stock": 1, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas Pipo", "cat": "Botellas", "precio": 70000, "costo": 50000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Caldas G", "cat": "Botellas", "precio": 130000, "costo": 90000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Amarillo", "cat": "Botellas", "precio": 80000, "costo": 45000, "stock": 3, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Amarillo Garrafa", "cat": "Botellas", "precio": 120000, "costo": 86000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Aguardiente Pipo", "cat": "Botellas", "precio": 65000, "costo": 45000, "stock": 2, "min": 0, "comanda": false, "opciones": []}, {"nombre": "JP", "cat": "Botellas", "precio": 15000, "costo": 11300, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Buchanan's Master Litro", "cat": "Botellas", "precio": 15000, "costo": 8250, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Buchanan's Master 750", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Old Parr Litro", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Old Parr 750", "cat": "Botellas", "precio": 220000, "costo": 175000, "stock": 0, "min": 0, "comanda": false, "opciones": []}, {"nombre": "Michelada tradicional", "cat": "Micheladas", "precio": 8000, "costo": 5000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda normal", "cat": "Micheladas", "precio": 10000, "costo": 7000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda cerveza", "cat": "Micheladas", "precio": 12000, "costo": 9000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Corona", "cat": "Micheladas", "precio": 15000, "costo": 10125, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Smirnoff", "cat": "Micheladas", "precio": 16000, "costo": 9500, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}];
+const BAR_EJEMPLO = [{"nombre": "Águila Original", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2083, "stock": 56, "min": 24, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Costeña", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 1875, "stock": 61, "min": 24, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Águila Light", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 1958, "stock": 9, "min": 24, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Costeñita", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2026, "stock": 236, "min": 24, "comanda": true, "opciones": [], "porCaja": 38}, {"nombre": "Póker", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2833, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Budweiser", "cat": "Cervezas / Sodas", "precio": 3500, "costo": 2500, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Club Colombia", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 18, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Heineken", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2583, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Stella", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3250, "stock": 35, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Smirnoff", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 8000, "stock": 17, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Coronita", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 2916, "stock": 56, "min": 24, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Electrolit", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 6583, "stock": 20, "min": 6, "comanda": true, "opciones": []}, {"nombre": "Soda Bretaña", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2416, "stock": 10, "min": 6, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Agua", "cat": "Cervezas / Sodas", "precio": 3000, "costo": 750, "stock": 22, "min": 12, "comanda": true, "opciones": [], "porCaja": 24}, {"nombre": "Gatorade", "cat": "Cervezas / Sodas", "precio": 5000, "costo": 3333, "stock": 8, "min": 6, "comanda": true, "opciones": [], "porCaja": 12}, {"nombre": "Coca Cola", "cat": "Cervezas / Sodas", "precio": 4000, "costo": 2500, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Czechvar", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 9733, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Liefmans", "cat": "Cervezas / Sodas", "precio": 15000, "costo": 13722, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "BBC", "cat": "Cervezas / Sodas", "precio": 10000, "costo": 4747, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Aguardiente G", "cat": "Botellas", "precio": 125000, "costo": 94000, "stock": 3, "min": 3, "comanda": true, "opciones": []}, {"nombre": "Aguardiente Limo", "cat": "Botellas", "precio": 80000, "costo": 58000, "stock": 9, "min": 6, "comanda": true, "opciones": [], "porCaja": 12}, {"nombre": "Medellín G", "cat": "Botellas", "precio": 135000, "costo": 113000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "8 Años", "cat": "Botellas", "precio": 110000, "costo": 70000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Medellín Limo", "cat": "Botellas", "precio": 85000, "costo": 59000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Caldas Litro", "cat": "Botellas", "precio": 85000, "costo": 53000, "stock": 1, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Caldas Pipo", "cat": "Botellas", "precio": 70000, "costo": 50000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Caldas G", "cat": "Botellas", "precio": 130000, "costo": 90000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Amarillo", "cat": "Botellas", "precio": 80000, "costo": 45000, "stock": 3, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Amarillo Garrafa", "cat": "Botellas", "precio": 120000, "costo": 86000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Aguardiente Pipo", "cat": "Botellas", "precio": 65000, "costo": 45000, "stock": 2, "min": 0, "comanda": true, "opciones": []}, {"nombre": "JP", "cat": "Botellas", "precio": 15000, "costo": 11300, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Buchanan's Master Litro", "cat": "Botellas", "precio": 15000, "costo": 8250, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Buchanan's Master 750", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Old Parr Litro", "cat": "Botellas", "precio": 10000, "costo": 7000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Old Parr 750", "cat": "Botellas", "precio": 220000, "costo": 175000, "stock": 0, "min": 0, "comanda": true, "opciones": []}, {"nombre": "Michelada tradicional", "cat": "Micheladas", "precio": 8000, "costo": 5000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda normal", "cat": "Micheladas", "precio": 10000, "costo": 7000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Soda cerveza", "cat": "Micheladas", "precio": 12000, "costo": 9000, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Corona", "cat": "Micheladas", "precio": 15000, "costo": 10125, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}, {"nombre": "Michelada Smirnoff", "cat": "Micheladas", "precio": 16000, "costo": 9500, "stock": null, "min": 0, "comanda": true, "opciones": ["Frutos rojos", "Mango biche", "Fresa", "Maracuyá", "Chicle", "Mora azul", "Sin sabor"]}];
 
 /* =====================================================================
    NEXORA POS — Piloto fase 1
@@ -433,7 +451,9 @@ const PERMS = [
   ['pedidos', 'Mostrador y domicilios'],
   ['cobrar', 'Cobrar y cerrar ventas'],
   ['descuentos', 'Aplicar descuentos'],
+  ['cobrarPropias', 'Cobrar sus propias mesas'],
   ['anular', 'Anular productos ya enviados'],
+  ['anularPropias', 'Anular en sus propias mesas (con motivo)'],
   ['cocina', 'Pantalla de cocina'],
   ['caja', 'Caja: abrir, cerrar y movimientos'],
   ['ventas', 'Ver ventas y reportes'],
@@ -441,12 +461,13 @@ const PERMS = [
   ['inventario', 'Inventario: stock, entradas y conteos'],
   ['costos', 'Ver costos y ganancias'],
   ['productos', 'Gestionar productos y categorías'],
+  ['actividad', 'Ver el registro de actividad'],
   ['ajustes', 'Ajustes, usuarios y plano de mesas'],
 ];
 const ROLES = { admin: 'Administrador', cajero: 'Cajero', mesero: 'Mesero', cocina: 'Cocina' };
 const DEFAULT_PERMS = {
   cajero: { salon: 1, pedidos: 1, cobrar: 1, descuentos: 1, anular: 1, cocina: 1, caja: 1, ventas: 1 },
-  mesero: { salon: 1 },
+  mesero: { salon: 1, cobrarPropias: 1, anularPropias: 1 },
   cocina: { cocina: 1 },
 };
 
@@ -657,6 +678,7 @@ async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
       const d = { nombre: p.nombre, categoriaId: cats[p.cat], precio: p.precio, costo: p.costo || 0, cocina: !!p.comanda, activo: true, orden: i + 1, controlStock: p.stock != null, stockMin: p.min || 0 };
       if (p.stock != null) d.stock = p.stock;
       if (p.opciones && p.opciones.length) d.opciones = p.opciones;
+      if (p.porCaja) d.porCaja = p.porCaja;
       productos['p' + (i + 1)] = d;
     });
   } else {
@@ -678,7 +700,7 @@ async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
   }
   const usuarios = { u_admin: { nombre: 'Administrador', rol: 'admin', pin: await hashPin(adminPin, salt), activo: true, orden: 1 } };
   if (usuariosEjemplo) {
-    usuarios.u_caja = { nombre: 'Laura (caja)', rol: 'cajero', pin: await hashPin('1111', salt), activo: true, orden: 2 };
+    usuarios.u_caja = { nombre: 'Laura', rol: 'cajero', pin: await hashPin('1111', salt), activo: true, orden: 2 };
     usuarios.u_mes1 = { nombre: 'Carlos', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 3 };
     usuarios.u_mes2 = { nombre: 'Andrea', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 4 };
     usuarios.u_coc = { nombre: cfg.nombreCocina, rol: 'cocina', pin: await hashPin('3333', salt), activo: true, orden: 5 };
@@ -724,7 +746,31 @@ function saveDrafts() { try { localStorage.setItem(DKEY(), JSON.stringify(S.draf
 
 const byOrden = (a, b) => (a.orden ?? 999) - (b.orden ?? 999) || String(a.nombre).localeCompare(String(b.nombre), 'es', { numeric: true });
 const rolName = r => r === 'cocina' ? (S.cfg.nombreCocina || 'Cocina') : (ROLES[r] || r || '');
-const perm = k => !!S.user && (S.user.rol === 'admin' || !!(S.cfg?.permisos?.[S.user.rol]?.[k]));
+const perm = k => {
+  if (!S.user) return false;
+  if (S.user.rol === 'admin') return true;
+  const v = (S.cfg?.permisos?.[S.user.rol] || {})[k];
+  return !!(v ?? (DEFAULT_PERMS[S.user.rol] || {})[k]);
+};
+const esSuya = v => !!v && v.tipo === 'mesa' && !!S.user && v.meseroId === S.user.id;
+const canCobrar = v => perm('cobrar') || (perm('cobrarPropias') && esSuya(v));
+const canAnular = v => perm('anular') || (perm('anularPropias') && esSuya(v));
+const resumenItems = items => (items || []).map(i => `${i.cant} ${i.nombre}${i.nota ? ' (' + i.nota + ')' : ''}`).join(', ');
+/* registro de actividad: quién hizo qué y cuándo */
+/* usuario de mantenimiento (soporte NEXORA): no vive en la lista de usuarios del cliente,
+   su clave la define NEXORA desde el panel y queda en la licencia (solo NEXORA la puede cambiar) */
+const MANT_ID = '_mant';
+const mantUser = () => ({ id: MANT_ID, nombre: 'Mantenimiento', rol: 'admin', activo: true, mant: true, color: '#0f172a' });
+async function mantHashActual() {
+  if (S.lic && S.lic.mantHash) return S.lic.mantHash;
+  return DB.mode === 'local' ? await hashPin('0000', DB.nid) : null;
+}
+function logAct(tipo, texto, extra = {}) {
+  if (!S.user) return;
+  const d = { tipo, texto, usuario: S.user.nombre, usuarioId: S.user.id, rol: S.user.rol, fecha: now() };
+  Object.entries(extra).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') d[k] = v; });
+  try { DB.add('actividad', d); } catch (e) { console.warn(e); }
+}
 const ventas = () => Object.values(S.ventasMap);
 const gVenta = id => S.ventasMap[id];
 const ventasAbiertas = () => ventas().filter(v => v.estado === 'abierta');
@@ -869,7 +915,7 @@ function startSubs() {
   SUBS.push(DB.subDoc('config', 'general', d => { S.cfg = d || {}; if (!S.cfg.permisos) S.cfg.permisos = DEFAULT_PERMS; mark('cfg'); render(); }));
   SUBS.push(DB.sub('usuarios', null, list => {
     S.usuarios = list.sort(byOrden);
-    if (S.user) {
+    if (S.user && !S.user.mant) {
       const u = list.find(x => x.id === S.user.id);
       if (!u || !u.activo) { S.user = null; localStorage.removeItem('nexorapos_session'); S.screen = 'pin'; PINST = { userId: null, digits: '' }; }
       else S.user = u;
@@ -909,10 +955,11 @@ function onComandas(l) {
   firstCom = false; S.comandas = l; render();
 }
 
-function enterAfterLoad() {
+async function enterAfterLoad() {
   if (S.user) { S.screen = 'app'; render(); return; }
   let sess = null; try { sess = JSON.parse(localStorage.getItem('nexorapos_session')); } catch (e) { }
-  const u = !licState().bloqueado && sess && sess.nid === DB.nid && S.usuarios.find(x => x.id === sess.userId && x.activo);
+  let u = !licState().bloqueado && sess && sess.nid === DB.nid && S.usuarios.find(x => x.id === sess.userId && x.activo);
+  if (!u && !licState().bloqueado && sess && sess.nid === DB.nid && sess.userId === MANT_ID && sess.h && sess.h === (await mantHashActual())) u = mantUser();
   if (u) { S.user = u; S.screen = 'app'; if (!canView(S.view)) S.view = defaultView(); }
   else { S.screen = 'pin'; PINST = { userId: null, digits: '' }; }
   render();
@@ -934,8 +981,18 @@ function beep() {
 /* ===================== render ===================== */
 let rq = false;
 function render() { if (rq) return; rq = true; requestAnimationFrame(doRender); }
+/* una sola vez por negocio: llena "unidades por caja" de los productos del bar que aún no lo tengan */
+let MIG_PC = false;
+function migrarPorCaja() {
+  if (MIG_PC || !S.user || S.user.rol !== 'admin' || !S.cfg || !S.productos || !S.productos.length) return;
+  MIG_PC = true; if (S.cfg.porCajaV1) return;
+  const tabla = {}; (typeof BAR_EJEMPLO !== 'undefined' ? BAR_EJEMPLO : []).forEach(p => { if (p.porCaja) tabla[norm(p.nombre)] = p.porCaja; });
+  S.productos.forEach(p => { const c = tabla[norm(p.nombre)]; if (c && !(parseInt(p.porCaja, 10) > 0)) DB.update('productos', p.id, { porCaja: c }); });
+  DB.update('config', 'general', { porCajaV1: true });
+}
 function doRender() {
   rq = false;
+  try { migrarPorCaja(); } catch (e) { console.warn(e); }
   if (S.dragging) { setTimeout(render, 150); return; }
   const root = $('#root');
   const act = document.activeElement;
@@ -981,10 +1038,10 @@ function setupHTML() {
   <div class="logo-big">${LOGO}<b>${APP_NAME}</b></div>
   <h2>Crear el negocio</h2><p class="muted small" style="margin-bottom:16px">Primera vez con la cuenta ${esc(S.authEmail)}</p>
   <div class="field"><label>Nombre del negocio</label><input class="inp" id="st_nombre" data-keep placeholder="Ej: Restaurante El Sabor"></div>
-  <div class="grid2"><div class="field"><label>PIN del administrador</label><input class="inp" id="st_pin" data-keep inputmode="numeric" maxlength="4" placeholder="4 dígitos"></div>
-  <div class="field"><label>Repite el PIN</label><input class="inp" id="st_pin2" data-keep inputmode="numeric" maxlength="4"></div></div>
+  <div class="grid2"><div class="field"><label>Contraseña del Administrador</label><input class="inp" id="st_pin" data-keep inputmode="numeric" maxlength="4" placeholder="4 números"></div>
+  <div class="field"><label>Repite la contraseña</label><input class="inp" id="st_pin2" data-keep inputmode="numeric" maxlength="4"></div></div>
   <div class="field"><label>Empezar con</label><select class="inp" id="st_tipo"><option value="bar">Ejemplo de bar: cervezas, botellas y micheladas con mesas</option><option value="restaurante">Ejemplo de restaurante: menú de comidas</option><option value="vacio">Sin productos (lo cargo yo o importo un Excel)</option></select></div>
-  <label class="chk"><input type="checkbox" id="st_us"> Crear usuarios de ejemplo (caja, 2 meseros y barra con PIN 1111, 2222 y 3333)</label>
+  <label class="chk"><input type="checkbox" id="st_us"> Crear usuarios de ejemplo (caja, 2 meseros y barra con contraseñas 1111, 2222 y 3333)</label>
   <button class="btn pri block lg" style="margin-top:12px" data-act="crearNegocio">Crear negocio</button>
   <button class="btn ghost block" style="margin-top:6px" data-act="logoutNegocio">Salir</button>
   <p class="small" style="color:var(--bad);margin-top:10px">${esc(S.setupErr || '')}</p>
@@ -993,28 +1050,41 @@ function setupHTML() {
 
 function avatar(u, size = 44) { return `<div class="avatar" style="background:${colorFor(u.id)};width:${size}px;height:${size}px">${esc(initials(u.nombre))}</div>`; }
 
+const lockLeft = () => Math.max(0, Math.ceil(((+localStorage.getItem('nexorapos_lock') || 0) - Date.now()) / 1000));
 function pinHTML() {
   const neg = esc(S.cfg.nombre || '');
-  if (!PINST.userId) {
-    const us = S.usuarios.filter(u => u.activo);
-    return `<div class="center"><div class="card login" style="max-width:560px">
+  const lk = lockLeft();
+  const demo = DB.mode === 'local' ? `<p class="muted small" style="margin-top:14px">Demo · Administrador 1234 · Laura 1111 (caja) · Carlos 2222 · Andrea 2222 · ${esc(S.cfg.nombreCocina || 'Cocina')} 3333</p>` : '';
+  return `<div class="center"><div class="card login">
     <div class="logo-big">${LOGO}<div><b>${APP_NAME}</b><div class="muted small">${neg}</div></div></div>
-    <h2>¿Quién va a trabajar?</h2>
-    <div class="ulist">${us.map(u => `<button class="ubtn" data-act="pinUser" data-id="${u.id}">${avatar(u)}<span>${esc(u.nombre)}</span><span class="muted small" style="font-weight:500">${rolName(u.rol)}</span></button>`).join('')}</div>
-    ${DB.mode === 'local' ? `<p class="muted small" style="margin-top:16px">Demo · PIN: Administrador 1234 · Caja 1111 · Meseros 2222 · ${esc(S.cfg.nombreCocina || 'Cocina')} 3333</p>` : `<button class="btn ghost sm" style="margin-top:14px" data-act="logoutNegocio">Salir de la cuenta del negocio</button>`}
-    </div></div>`;
-  }
-  const u = S.usuarios.find(x => x.id === PINST.userId);
-  if (!u) { PINST.userId = null; return pinHTML(); }
-  const dots = [0, 1, 2, 3].map(i => `<i class="${i < PINST.digits.length ? 'f' : ''}"></i>`).join('');
-  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-  return `<div class="center"><div class="card login" style="max-width:360px;text-align:center">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${avatar(u, 60)}<h2>${esc(u.nombre)}</h2><p class="muted small">Escribe tu PIN</p></div>
-  <div class="pindots ${PINST.err ? 'shake' : ''}">${dots}</div>
-  <div class="pinpad">${keys.map(k => `<button data-act="pinKey" data-k="${k}">${k}</button>`).join('')}
-  <button data-act="pinBack" style="font-size:14px">Volver</button><button data-act="pinKey" data-k="0">0</button><button data-act="pinDel" style="font-size:18px">⌫</button></div>
+    <h2>Iniciar sesión</h2><p class="muted small" style="margin-bottom:16px">Cada persona entra con su usuario y su contraseña.</p>
+    <div class="field"><label>Usuario</label><input class="inp" id="pl_u" data-keep data-enter="pinLogin" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Tu nombre" value="${esc(localStorage.getItem('nexorapos_lastuser') || '')}"></div>
+    <div class="field"><label>Contraseña</label><input class="inp" id="pl_p" data-keep data-enter="pinLogin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="4 números"></div>
+    <button class="btn pri block lg" data-act="pinLogin" ${lk ? 'disabled' : ''}>Entrar</button>
+    <p class="small" style="color:var(--bad);margin-top:10px;min-height:18px">${lk ? `Demasiados intentos fallidos. Espera ${lk} segundos.` : esc(S.pinErr || '')}</p>
+    ${demo}${DB.mode === 'firebase' ? '<button class="btn ghost sm" style="margin-top:8px" data-act="logoutNegocio">Desconectar este equipo del negocio</button>' : ''}
   </div></div>`;
 }
+A.pinLogin = async () => {
+  if (lockLeft()) { render(); setTimeout(render, lockLeft() * 1000 + 50); return; }
+  const name = $('#pl_u').value.replace(/\s+/g, ' ').trim(), pin = $('#pl_p').value.trim();
+  if (!name || !/^\d{4}$/.test(pin)) { S.pinErr = 'Escribe tu usuario y tu contraseña de 4 números'; render(); return; }
+  const h = await hashPin(pin, DB.nid);
+  let u = S.usuarios.find(x => x.activo && norm(x.nombre).replace(/\s+/g, ' ').trim() === norm(name)), ok = !!u && h === u.pin;
+  if (!u && norm(name) === 'mantenimiento') { const mh = await mantHashActual(); if (mh && h === mh) { u = mantUser(); ok = true; } }
+  $('#pl_p').value = '';
+  if (!ok) {
+    S.pinFails = (S.pinFails || 0) + 1;
+    if (S.pinFails >= 5) { localStorage.setItem('nexorapos_lock', String(Date.now() + 60000)); S.pinFails = 0; setTimeout(render, 60050); }
+    S.pinErr = 'Usuario o contraseña incorrectos'; render(); return;
+  }
+  S.pinFails = 0; S.pinErr = '';
+  if (!u.mant) localStorage.setItem('nexorapos_lastuser', u.nombre);
+  S.user = u; S.screen = 'app'; S.view = defaultView(); S.editPlano = false;
+  localStorage.setItem('nexorapos_session', JSON.stringify({ nid: DB.nid, userId: u.id, ...(u.mant ? { h } : {}) }));
+  logAct('sesion', 'Inició sesión');
+  render();
+};
 
 const NAV = [['vender', 'Vender'], ['salon', 'Salón'], ['pedidos', 'Pedidos'], ['cocina', 'Cocina'], ['caja', 'Caja'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['productos', 'Productos'], ['ajustes', 'Ajustes']];
 function canView(k) {
@@ -1040,7 +1110,7 @@ function appHTML() {
 function topHTML(title, extra = '', back = '') {
   return `${DB.mode === 'local' ? '<div class="demo-bar">Modo demo · los datos quedan solo en este navegador. Configura Firebase para usarlo en varios equipos.</div>' : ''}${licBar()}
   <div class="top">${back ? `<button class="btn sm" data-act="${back}">${IC.back}</button>` : ''}<h1>${title}</h1>${extra}<div class="grow"></div>
-  <div class="uchip">${(rolName(S.user.rol)) !== S.user.nombre ? `<span>${esc(rolName(S.user.rol))}</span>` : ''}<b>${esc(S.user.nombre)}</b><button data-act="logoutUser">Cambiar</button></div></div>`;
+  <div class="uchip">${S.user.mant ? '<span>Soporte NEXORA</span>' : (rolName(S.user.rol)) !== S.user.nombre ? `<span>${esc(rolName(S.user.rol))}</span>` : ''}<b>${esc(S.user.nombre)}</b><button data-act="logoutUser">Cambiar</button></div></div>`;
 }
 
 function viewHTML() {
@@ -1089,31 +1159,14 @@ A.logoutNegocio = async () => { localStorage.removeItem('nexorapos_session'); S.
 A.crearNegocio = async () => {
   const n = $('#st_nombre').value.trim(), p = $('#st_pin').value.trim(), p2 = $('#st_pin2').value.trim();
   if (!n) { S.setupErr = 'Escribe el nombre del negocio'; render(); return; }
-  if (!/^\d{4}$/.test(p)) { S.setupErr = 'El PIN debe tener 4 números'; render(); return; }
-  if (p !== p2) { S.setupErr = 'Los PIN no coinciden'; render(); return; }
+  if (!/^\d{4}$/.test(p)) { S.setupErr = 'La contraseña debe tener 4 números'; render(); return; }
+  if (p !== p2) { S.setupErr = 'Las contraseñas no coinciden'; render(); return; }
   S.setupErr = 'Creando…'; render();
   try { const sd = await buildSeed(n, p, $('#st_us').checked, $('#st_tipo').value); await DB.seed(sd.data, sd.root); S.setupErr = ''; startSubs(); }
   catch (err) { console.error(err); S.setupErr = 'No se pudo crear: ' + (err.code || err.message); render(); }
 };
-A.pinUser = el => { PINST = { userId: el.dataset.id, digits: '', err: false }; render(); };
-A.pinBack = () => { PINST = { userId: null, digits: '', err: false }; render(); };
-A.pinDel = () => { PINST.digits = PINST.digits.slice(0, -1); PINST.err = false; render(); };
-A.pinKey = el => pinPress(el.dataset.k);
-async function pinPress(k) {
-  if (PINST.digits.length >= 4) return;
-  PINST.digits += k; PINST.err = false; render();
-  if (PINST.digits.length === 4) {
-    const u = S.usuarios.find(x => x.id === PINST.userId);
-    const h = await hashPin(PINST.digits, DB.nid);
-    if (u && h === u.pin) {
-      S.user = u; S.screen = 'app'; S.view = defaultView(); S.editPlano = false;
-      localStorage.setItem('nexorapos_session', JSON.stringify({ nid: DB.nid, userId: u.id }));
-      PINST = { userId: null, digits: '' }; render();
-    } else { PINST.digits = ''; PINST.err = true; render(); }
-  }
-}
-A.logoutUser = () => { S.user = null; localStorage.removeItem('nexorapos_session'); S.screen = 'pin'; PINST = { userId: null, digits: '' }; closeModal(); render(); };
-A.nav = el => { S.view = el.dataset.v; S.editPlano = false; if (S.view === 'caja') S.arqueosHist = null; if (S.view === 'ventas') S.ventasDiaData = null; render(); $('main') && ($('main').scrollTop = 0); };
+A.logoutUser = () => { logAct('sesion', 'Cerró sesión'); S.user = null; S.pinErr = ''; localStorage.removeItem('nexorapos_session'); S.screen = 'pin'; PINST = { userId: null, digits: '' }; closeModal(); render(); };
+A.nav = el => { S.view = el.dataset.v; S.editPlano = false; if (S.view === 'caja') S.arqueosHist = null; if (S.view === 'ventas') { S.ventasDiaData = null; S.mData = null; S.aData = null; } if (S.view === 'inventario') S.invmovs = null; render(); $('main') && ($('main').scrollTop = 0); };
 
 /* ===================== salón ===================== */
 function vSalon() {
@@ -1237,6 +1290,7 @@ A.abrirMesa = () => {
   const ex = ventaDeMesa(MODAL.mesaId);
   if (ex) { closeModal(); toast('Esa mesa ya fue abierta'); openPedido(ex.id); return; }
   const id = crearVenta({ tipo: 'mesa', mesaId: MODAL.mesaId, ...info });
+  logAct('mesa', `Abrió la mesa ${(gMesa(MODAL.mesaId) || {}).nombre || ''} (${info.personas} pers.${info.meseroNombre ? ', mesero ' + info.meseroNombre : ''})`, { ventaId: id });
   closeModal(); openPedido(id);
 };
 
@@ -1264,6 +1318,8 @@ function vPedido() {
   const draft = S.drafts[v.id] || [];
   const c = calc(v, draft);
   const nDraft = sum(draft, i => i.cant);
+  const vacia = editable && !(v.items || []).some(i => i.estado !== 'anulado') && !draft.length;
+  const lblCerrar = v.tipo === 'mesa' ? 'Cerrar mesa' : 'Cancelar pedido';
   const tags = [];
   if (v.tipo === 'mesa') { tags.push(`<span class="tag">${v.personas || 0} pers.</span>`); if (v.meseroNombre) tags.push(`<span class="tag">${esc(v.meseroNombre)}</span>`); }
   else if (v.cliente && v.cliente.nombre) tags.push(`<span class="tag">${esc(v.cliente.nombre)}</span>`);
@@ -1278,7 +1334,7 @@ function vPedido() {
       <div class="n"><b>${esc(i.nombre)}</b>${i.nota ? `<div class="nt">${esc(i.nota)}</div>` : ''}
         <div class="x">${hhmm(i.enviadoEn)}${i.estado === 'anulado' ? ' · Anulado: ' + esc(i.anuladoMotivo || '') : ''}</div></div>
       <div class="p">${money(i.precio * i.cant)}</div>
-      ${editable && i.estado !== 'anulado' && perm('anular') ? `<button class="rm" data-act="anularItem" data-id="${i.id}" title="Anular">×</button>` : ''}
+      ${editable && i.estado !== 'anulado' && canAnular(v) ? `<button class="rm" data-act="anularItem" data-id="${i.id}" title="Anular">×</button>` : ''}
     </div>`).join('');
   const draftHTML = draft.length ? `<div class="draft"><div class="ttl">Por enviar · ${nDraft}</div>${draft.map(i => `<div class="it">
       <div class="n"><b>${esc(i.nombre)}</b>${i.nota ? `<div class="nt">${esc(i.nota)}</div>` : ''}<div class="x"><button class="lnk" data-act="notaDraft" data-id="${i.id}">${i.nota ? 'Editar nota' : '+ Nota'}</button> · ${money(i.precio)} c/u</div></div>
@@ -1311,13 +1367,14 @@ function vPedido() {
       ${v.estado === 'cerrada' && v.propina ? `<div class="tot"><span>Propina</span><span>${money(v.propina)}</span></div>` : ''}
       <div class="tot big"><span>Total</span><span>${money(v.estado === 'cerrada' ? (v.total || 0) + (v.propina || 0) : c.total)}</span></div>
       ${editable ? `
-        ${draft.length ? `<button class="btn ok lg block" data-act="enviar">Enviar a cocina (${nDraft})</button>` : ''}
+        ${vacia ? `<button class="btn lg block" data-act="liberar" style="border-color:var(--bad);color:var(--bad)">${lblCerrar} (sin consumo)</button>` : ''}
+        ${draft.length ? `<button class="btn ok lg block" data-act="enviar">Enviar a ${esc((S.cfg.nombreCocina || 'cocina').toLowerCase())} (${nDraft})</button>` : ''}
         <div class="acts"><button class="btn" data-act="precuenta">Precuenta</button><button class="btn" data-act="descuento" ${perm('descuentos') ? '' : 'disabled'}>Descuento</button><button class="btn" data-act="masVenta">Más…</button></div>
-        ${perm('cobrar') ? `<button class="btn pri lg block" data-act="cobrar" ${c.total <= 0 ? 'disabled' : ''}>Cobrar ${money(c.total)}</button>` : ''}
+        ${canCobrar(v) ? `<button class="btn pri lg block" data-act="cobrar" ${c.total <= 0 ? 'disabled' : ''}>Cobrar ${money(c.total)}</button>` : ''}
       ` : `<button class="btn block" data-act="reimprimir" data-id="${v.id}">Reimprimir comprobante</button>`}
     </div></div>`;
 
-  return topHTML(esc(tituloVenta(v)), tags.join(''), 'backPedido') +
+  return topHTML(esc(tituloVenta(v)), tags.join('') + (vacia ? `<button class="btn sm" data-act="liberar" style="color:var(--bad)">${lblCerrar}</button>` : ''), 'backPedido') +
     `<div class="mtabs"><button class="${!S.showAcct ? 'on' : ''}" data-act="showAcct" data-v="0">Productos</button><button class="${S.showAcct ? 'on' : ''}" data-act="showAcct" data-v="1">Cuenta · ${money(c.total)}${nDraft ? ` <span class="tag warn">${nDraft} sin enviar</span>` : ''}</button></div>
     <div class="pv ${S.showAcct ? 'show-acct' : ''}">${left}${right}</div>`;
 }
@@ -1367,10 +1424,14 @@ A.saveNota = () => {
 };
 
 /* inventario: mueve el stock de los productos que lo controlan */
-function moverStock(items, signo) {
+function moverStock(items, signo, ctx) {
   const porProd = {};
   (items || []).forEach(i => { if (i.estado !== 'anulado') porProd[i.productoId] = (porProd[i.productoId] || 0) + i.cant; });
-  Object.entries(porProd).forEach(([pid, n]) => { const p = gProd(pid); if (p && p.controlStock) DB.inc('productos', pid, 'stock', signo * n); });
+  Object.entries(porProd).forEach(([pid, n]) => {
+    const p = gProd(pid); if (!p || !p.controlStock) return;
+    DB.inc('productos', pid, 'stock', signo * n);
+    if (ctx && S.user) DB.add('invmov', { productoId: pid, nombre: p.nombre, tipo: 'devolucion', cant: signo * n, costo: Number(p.costo) || 0, nota: ctx.ref + (ctx.motivo ? ' · ' + ctx.motivo : ''), usuario: S.user.nombre, fecha: now() });
+  });
 }
 
 /* envía lo pendiente: confirma productos y crea la comanda de cocina */
@@ -1387,13 +1448,15 @@ function enviarDraft(v, silent = false) {
     if (S.cfg.imprimirComanda) printComanda(v, coc);
   }
   delete S.drafts[v.id]; saveDrafts();
-  if (!silent) toast(coc.length ? 'Pedido enviado a cocina' : 'Productos agregados', 'ok');
+  logAct('pedido', `Envió ${resumenItems(items)} · ${tituloVenta(v)}`, { ventaId: v.id });
+  if (!silent) toast(coc.length ? 'Pedido enviado a ' + (S.cfg.nombreCocina || 'cocina').toLowerCase() : 'Productos agregados', 'ok');
   return items;
 }
 A.enviar = () => { const v = gVenta(S.ventaId); if (v) { enviarDraft(v); render(); } };
 
 A.anularItem = el => {
   const v = gVenta(S.ventaId); const i = (v.items || []).find(x => x.id === el.dataset.id); if (!i) return;
+  if (!canAnular(v)) return toast('No puedes anular en esta mesa', 'err');
   MODAL = { type: 'anular', itemId: i.id, cant: i.cant, max: i.cant };
   const mot = ['Error al tomar el pedido', 'El cliente cambió de opinión', 'Se demoró mucho', 'Producto agotado'];
   openModal(`${mHead('Anular ' + esc(i.nombre))}<div class="mb">
@@ -1417,7 +1480,8 @@ A.confAnular = () => {
     });
     return { items };
   }, v);
-  if (it) moverStock([{ ...it, cant: Math.min(cant, it.cant), estado: 'enviado' }], +1);
+  if (it) moverStock([{ ...it, cant: Math.min(cant, it.cant), estado: 'enviado' }], +1, { ref: 'Anulado en ' + tituloVenta(v), motivo });
+  if (it) logAct('anulacion', `Anuló ${Math.min(cant, it.cant)} ${it.nombre} de ${tituloVenta(v)}${it.controlStock !== false ? ' (vuelve al inventario)' : ''}`, { motivo, ventaId: v.id, monto: it.precio * Math.min(cant, it.cant) });
   if (it && it.cocina) DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: S.user.nombre, items: [{ nombre: it.nombre, cant, nota: 'Motivo: ' + motivo }], estado: 'pendiente', anulacion: true, creadaEn: now() });
   closeModal(); toast('Producto anulado');
 };
@@ -1442,9 +1506,10 @@ A.saveDesc = () => {
   if (MODAL.tipo === 'valor' && val > 0 && val < 1000) val *= 1000;
   if (!(val > 0) || (MODAL.tipo === 'pct' && val > 100)) return toast('Valor no válido', 'err');
   DB.update('ventas', S.ventaId, { descuento: { tipo: MODAL.tipo, valor: val, motivo: $('#ds_m').value.trim(), por: S.user.nombre } });
+  logAct('descuento', `Descuento de ${MODAL.tipo === 'pct' ? val + '%' : money(val)} en ${tituloVenta(gVenta(S.ventaId))}`, { motivo: $('#ds_m').value.trim(), ventaId: S.ventaId });
   closeModal();
 };
-A.quitarDesc = () => { DB.update('ventas', S.ventaId, { descuento: null }); closeModal(); };
+A.quitarDesc = () => { DB.update('ventas', S.ventaId, { descuento: null }); logAct('descuento', `Quitó el descuento de ${tituloVenta(gVenta(S.ventaId))}`, { ventaId: S.ventaId }); closeModal(); };
 
 A.precuenta = () => {
   const v = gVenta(S.ventaId); if (!v) return;
@@ -1464,7 +1529,7 @@ A.masVenta = () => {
   else opts.push('<button class="opt" data-act="editCliente">Datos del cliente <span>›</span></button>');
   opts.push('<button class="opt" data-act="reimpComanda">Reimprimir última comanda <span>›</span></button>');
   if (!hasItems) opts.push(`<button class="opt bad" data-act="liberar">${v.tipo === 'mesa' ? 'Liberar mesa (sin consumo)' : 'Cancelar pedido'} <span>›</span></button>`);
-  else if (perm('anular')) opts.push('<button class="opt bad" data-act="anularVentaAbierta">Anular toda la cuenta <span>›</span></button>');
+  else if (canAnular(v)) opts.push('<button class="opt bad" data-act="anularVentaAbierta">Anular toda la cuenta <span>›</span></button>');
   openModal(`${mHead('Opciones')}<div class="mb" style="padding-bottom:16px">${opts.join('')}</div>`);
 };
 A.editMesaInfo = () => { const v = gVenta(S.ventaId); closeModal(); modalAbrirMesa(gMesa(v.mesaId) || { id: v.mesaId, nombre: '' }, v); };
@@ -1477,9 +1542,12 @@ A.cambiarMesa = () => {
   }).join('');
   openModal(`${mHead('Mover ' + esc(tituloVenta(v)) + ' a…')}<div class="mb" style="padding-bottom:18px">${libres || '<p class="muted">No hay mesas libres</p>'}</div>`);
 };
-A.moverMesa = el => { DB.update('ventas', S.ventaId, { mesaId: el.dataset.id }); closeModal(); toast('Cuenta movida a la mesa ' + (gMesa(el.dataset.id) || {}).nombre, 'ok'); };
+A.moverMesa = el => { logAct('mesa', `Pasó ${tituloVenta(gVenta(S.ventaId))} a la mesa ${(gMesa(el.dataset.id) || {}).nombre || ''}`, { ventaId: S.ventaId }); DB.update('ventas', S.ventaId, { mesaId: el.dataset.id }); closeModal(); toast('Cuenta movida a la mesa ' + (gMesa(el.dataset.id) || {}).nombre, 'ok'); };
 A.liberar = () => {
-  const v = gVenta(S.ventaId); closeModal();
+  const v = gVenta(S.ventaId); closeModal(); if (!v) return;
+  if ((v.items || []).some(i => i.estado !== 'anulado')) return toast('La cuenta tiene productos: cóbrala o anúlala', 'err');
+  toast(tituloVenta(v) + (v.tipo === 'mesa' ? ' cerrada' : ' cancelado'), 'ok');
+  logAct('mesa', `${v.tipo === 'mesa' ? 'Cerró' : 'Canceló'} ${tituloVenta(v)} sin consumo`, { ventaId: v.id });
   delete S.drafts[v.id]; saveDrafts();
   DB.update('ventas', v.id, { estado: 'anulada', anuladaMotivo: 'Sin consumo', anuladaPor: S.user.nombre, cerradaEn: now() });
   A.backPedido();
@@ -1493,7 +1561,8 @@ A.anularVentaAbierta = () => {
 A.confAnularVenta = () => {
   const m = $('#av_m').value.trim(); if (!m) return toast('Escribe el motivo', 'err');
   const v = gVenta(S.ventaId); delete S.drafts[v.id]; saveDrafts();
-  moverStock(v.items, +1);
+  moverStock(v.items, +1, { ref: 'Cuenta anulada ' + tituloVenta(v), motivo: m });
+  logAct('anulacion', `Anuló toda la cuenta de ${tituloVenta(v)} (${money(calc(v).total)}): ${resumenItems((v.items || []).filter(i => i.estado !== 'anulado'))}`, { motivo: m, ventaId: v.id, monto: calc(v).total });
   DB.update('ventas', v.id, { estado: 'anulada', anuladaMotivo: m, anuladaPor: S.user.nombre, cerradaEn: now() });
   closeModal(); toast('Cuenta anulada'); A.backPedido();
 };
@@ -1508,10 +1577,10 @@ A.reimpComanda = () => {
 let PAY = null;
 A.cobrar = () => {
   const v = gVenta(S.ventaId); if (!v) return;
-  if (!perm('cobrar')) return toast('No tienes permiso para cobrar', 'err');
+  if (!canCobrar(v)) return toast('Solo puedes cobrar tus propias mesas', 'err');
   if (!S.arqueo) {
     MODAL = { type: 'cajaCerrada' };
-    openModal(`${mHead('La caja está cerrada')}<div class="mb"><p>Para cobrar primero hay que abrir la caja del turno.</p></div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button>${perm('caja') ? '<button class="btn pri" data-act="irCaja" data-primary>Ir a Caja</button>' : ''}</div>`);
+    openModal(`${mHead('La caja está cerrada')}<div class="mb"><p>Para cobrar primero hay que abrir la caja del turno.</p></div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button>${perm('caja') ? '<button class="btn pri" data-act="irCaja" data-primary>Ir a Caja</button>' : '<span class="muted small" style="align-self:center">Pide al cajero o al administrador que abra la caja.</span>'}</div>`);
     return;
   }
   const draft = S.drafts[v.id] || [];
@@ -1597,6 +1666,7 @@ A.payConfirm = () => {
     subtotal: c.subtotal, descuentoValor: c.desc, envio: c.envio, propina, total: c.total, arqueoId: S.arqueo.id,
   };
   DB.update('ventas', v.id, patch);
+  logAct('venta', `Cobró ${tituloVenta(v)} · ${money(c.total + propina)} · ${patch.pagos.map(p => p.medio).join(' + ')}${v.meseroNombre && v.meseroNombre !== S.user.nombre ? ' · mesero ' + v.meseroNombre : ''}`, { ventaId: v.id, monto: c.total + propina });
   const imprimir = $('#pay_pr').checked;
   closeModal();
   if (imprimir) printComprobante({ ...v, ...patch, items: [...(v.items || []), ...nuevos] });
@@ -1770,6 +1840,7 @@ A.abrirCaja = () => {
   if (S.arqueo) return;
   let base = parseMoney($('#cj_base').value); if (base > 0 && base < 1000) base *= 1000;
   DB.add('arqueos', { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base });
+  logAct('caja', `Abrió la caja con base de ${money(base)}`);
   $('#cj_base').value = ''; toast('Caja abierta', 'ok');
 };
 A.mov = el => {
@@ -1785,9 +1856,10 @@ A.saveMov = () => {
   const c = $('#mv_c').value.trim(); let m = parseMoney($('#mv_m').value); if (m > 0 && m < 1000) m *= 1000;
   if (!c || !(m > 0)) return toast('Escribe el concepto y el valor', 'err');
   DB.add('movimientos', { arqueoId: S.arqueo.id, tipo: MODAL.t, concepto: c, monto: m, medio: $('#mv_p').value, usuario: S.user.nombre, fecha: now() });
+  logAct('caja', `${MODAL.t === 'ingreso' ? 'Entrada' : 'Salida'} de dinero: ${c} · ${money(m)} (${$('#mv_p').value})`, { monto: m });
   closeModal();
 };
-A.delMov = el => confirmBox('Eliminar movimiento', '¿Eliminar este movimiento de caja?', 'Eliminar', () => DB.del('movimientos', el.dataset.id), true);
+A.delMov = el => { const mv = S.movs.find(x => x.id === el.dataset.id); confirmBox('Eliminar movimiento', '¿Eliminar este movimiento de caja?', 'Eliminar', () => { DB.del('movimientos', el.dataset.id); if (mv) logAct('caja', `Eliminó el movimiento de caja "${mv.concepto}" (${money(mv.monto)})`); }, true); };
 A.cerrarCaja = () => {
   const k = cajaCalc(); const ab = ventasAbiertas().length;
   MODAL = { type: 'cierre', k };
@@ -1819,6 +1891,7 @@ A.confCierre = () => {
   };
   const pr = $('#cc_pr').checked; const a = { ...S.arqueo, ...data };
   DB.update('arqueos', S.arqueo.id, data);
+  logAct('caja', `Cerró la caja · vendido ${money(data.ventasTotal)} · diferencia ${money(dif)}`, { monto: dif });
   closeModal(); toast('Caja cerrada', 'ok'); S.arqueosHist = null;
   if (pr) printCierre(a);
 };
@@ -1827,6 +1900,8 @@ A.verArqueo = el => { const h = (Array.isArray(S.arqueosHist) ? S.arqueosHist : 
 /* ===================== ventas y reportes ===================== */
 let LAST_VENTAS = [];
 function vVentas() {
+  if (S.vTab === 'meseros') return vMeseros();
+  if (S.vTab === 'actividad' && perm('actividad')) return vActividad();
   const hoy = S.ventasDia === dayInput(now());
   let list;
   if (hoy) list = ventas().filter(v => (v.estado === 'cerrada' || v.estado === 'anulada') && (v.cerradaEn || 0) >= S.dayStart);
@@ -1839,7 +1914,7 @@ function vVentas() {
     list = S.ventasDiaData.list;
   }
   const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${dayInput(now())}">`);
-  if (!list) return head + '<div class="wrap"><div class="card empty">Cargando ventas…</div></div>';
+  if (!list) return head + '<div class="wrap">' + ventasTabs() + '<div class="card empty">Cargando ventas…</div></div>';
   list = list.slice().sort((a, b) => (b.cerradaEn || 0) - (a.cerradaEn || 0));
   LAST_VENTAS = list;
   const ok = list.filter(v => v.estado === 'cerrada'), anul = list.filter(v => v.estado === 'anulada');
@@ -1857,7 +1932,7 @@ function vVentas() {
   const top = Object.entries(prods).sort((a, b) => b[1].c - a[1].c).slice(0, 10);
   const TN = { mesa: 'Mesas', mostrador: 'Mostrador', domicilio: 'Domicilios' };
   const listCard = (title, rows) => `<div class="card pad"><h3 class="sec-t">${title}</h3>${rows || '<p class="muted small">Sin datos</p>'}</div>`;
-  return head + `<div class="wrap">
+  return head + `<div class="wrap">${ventasTabs()}
     <div class="kpis">
       <div class="card kpi"><div class="l">Ventas</div><div class="v">${money(tot)}</div><div class="muted small">sin propinas</div></div>
       <div class="card kpi"><div class="l">Cuentas</div><div class="v">${ok.length}</div><div class="muted small">${anul.length} anuladas</div></div>
@@ -1911,7 +1986,8 @@ A.anularCerrada = () => {
 A.confAnularCerrada = () => {
   const m = $('#ac_m').value.trim(); if (!m) return toast('Escribe el motivo', 'err');
   const id = MODAL.id;
-  const vv = findVenta(id); if (vv && vv.estado === 'cerrada') moverStock(vv.items, +1);
+  const vv = findVenta(id); if (vv && vv.estado === 'cerrada') moverStock(vv.items, +1, { ref: 'Venta anulada ' + tituloVenta(vv), motivo: m });
+  if (vv) logAct('anulacion', `Anuló la venta ${tituloVenta(vv)} ya cobrada (${money((vv.total || 0) + (vv.propina || 0))})`, { motivo: m, ventaId: id, monto: (vv.total || 0) + (vv.propina || 0) });
   DB.update('ventas', id, { estado: 'anulada', anuladaMotivo: m, anuladaPor: S.user.nombre, anuladaEn: now() });
   const lv = LAST_VENTAS.find(v => v.id === id); if (lv) Object.assign(lv, { estado: 'anulada', anuladaMotivo: m });
   closeModal(); toast('Venta anulada'); render();
@@ -1955,7 +2031,8 @@ A.editProd = el => {
     ${perm('costos') ? `<div class="field"><label>Costo (precio de factura)</label><input class="inp money" id="pr_cost" inputmode="numeric" value="${p && p.costo ? num(p.costo) : ''}"></div>` : ''}
     <label class="chk"><input type="checkbox" id="pr_cs" data-ch="prCs" ${p && p.controlStock ? 'checked' : ''}> Controlar stock (se descuenta con cada venta)</label>
     <div class="grid2 ${p && p.controlStock ? '' : 'hidden'}" id="pr_stk"><div class="field"><label>Stock actual</label><input class="inp" id="pr_st" type="number" step="any" value="${p && p.stock != null ? p.stock : ''}"></div>
-    <div class="field"><label>Avisar cuando queden</label><input class="inp" id="pr_min" type="number" min="0" value="${p && p.stockMin ? p.stockMin : ''}" placeholder="Ej: 6"></div></div>
+    <div class="field"><label>Avisar cuando queden</label><input class="inp" id="pr_min" type="number" min="0" value="${p && p.stockMin ? p.stockMin : ''}" placeholder="Ej: 6"></div>
+    <div class="field"><label>Unidades por caja</label><input class="inp" id="pr_pc" type="number" min="0" step="1" value="${p && p.porCaja ? p.porCaja : ''}" placeholder="Ej: 30"></div></div>
     <label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina / barra (aparece en la comanda)</label>
     <div class="field" style="margin-top:6px"><label>Opciones para escoger al vender (opcional)</label><input class="inp" id="pr_op" value="${esc(p && p.opciones ? p.opciones.join(', ') : '')}" placeholder="Ej: Frutos rojos, Mango biche, Fresa"><span class="muted small">Separa con comas. Al vender, la app pregunta cuál.</span></div>
     <label class="chk"><input type="checkbox" id="pr_a" ${!p || p.activo !== false ? 'checked' : ''}> Activo (disponible para vender)</label>
@@ -1968,6 +2045,7 @@ A.saveProd = () => {
   const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked, opciones: $('#pr_op').value.split(',').map(x => x.trim()).filter(Boolean) };
   if ($('#pr_cost')) { let c = parseMoney($('#pr_cost').value); if (c > 0 && c < 1000 && pr >= 1000) c *= 1000; d.costo = c; }
   d.stockMin = Math.max(0, parseFloat($('#pr_min').value) || 0);
+  d.porCaja = Math.max(0, parseInt($('#pr_pc').value, 10) || 0);
   const old = MODAL.id ? gProd(MODAL.id) : null;
   const stV = $('#pr_st').value;
   if (d.controlStock && stV !== '') {
@@ -1978,9 +2056,10 @@ A.saveProd = () => {
     }
   } else if (d.controlStock && !old) d.stock = 0;
   if (MODAL.id) DB.update('productos', MODAL.id, d); else DB.add('productos', { ...d, orden: S.productos.length + 1 });
+  logAct('ajustes', old ? `Editó el producto ${n}${old.precio !== pr ? ` · precio ${money(old.precio)} → ${money(pr)}` : ''}` : `Creó el producto ${n} · ${money(pr)}`);
   closeModal(); toast('Producto guardado', 'ok');
 };
-A.delProd = () => { const id = MODAL.id; confirmBox('Eliminar producto', 'Las ventas anteriores no se afectan. ¿Eliminar?', 'Eliminar', () => DB.del('productos', id), true); };
+A.delProd = () => { const id = MODAL.id; const pp = gProd(id); confirmBox('Eliminar producto', 'Las ventas anteriores no se afectan. ¿Eliminar?', 'Eliminar', () => { DB.del('productos', id); logAct('ajustes', `Eliminó el producto ${pp ? pp.nombre : ''}`); }, true); };
 A.editCat = el => {
   const c = el.dataset.id ? gCat(el.dataset.id) : null;
   MODAL = { type: 'cat', id: c ? c.id : null, color: c ? c.color : COLORS[S.categorias.length % COLORS.length] };
@@ -2024,11 +2103,12 @@ function vAjustes() {
   if (t === 'usuarios') body = `<div class="card" style="max-width:760px;overflow:auto"><div class="row between pad" style="padding-bottom:8px"><h3 class="sec-t" style="margin:0">Usuarios</h3><button class="btn sm pri" data-act="editUser">+ Usuario</button></div>
     <table class="tbl"><thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th></tr></thead><tbody>
     ${S.usuarios.map(u => `<tr class="click" data-act="editUser" data-id="${u.id}"><td><div class="row">${avatar(u, 32)}<b>${esc(u.nombre)}</b></div></td><td>${rolName(u.rol)}</td><td>${u.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag">Inactivo</span>'}</td></tr>`).join('')}
-    </tbody></table><p class="muted small pad">Cada persona entra con su PIN de 4 números. Lo que haga queda registrado con su nombre.</p></div>`;
+    <tr><td><div class="row">${avatar(mantUser(), 32)}<b>Mantenimiento</b></div></td><td>Soporte NEXORA · acceso total</td><td><span class="tag">Fijo</span></td></tr>
+    </tbody></table><p class="muted small pad">Cada persona entra con su usuario (su nombre) y su contraseña de 4 números. Todo lo que haga queda en el registro de actividad.</p></div>`;
   if (t === 'permisos') {
     const p = c.permisos || {};
     body = `<div class="card" style="max-width:760px;overflow:auto"><table class="tbl"><thead><tr><th>Permiso</th><th style="text-align:center">Admin</th><th style="text-align:center">Cajero</th><th style="text-align:center">Mesero</th><th style="text-align:center">${esc(rolName('cocina'))}</th></tr></thead><tbody>
-    ${PERMS.map(([k, l]) => `<tr><td>${l}</td><td style="text-align:center"><input type="checkbox" checked disabled style="width:19px;height:19px"></td>${['cajero', 'mesero', 'cocina'].map(r => `<td style="text-align:center"><input type="checkbox" style="width:19px;height:19px;accent-color:var(--accent)" data-ch="perm" data-r="${r}" data-k="${k}" ${(p[r] || {})[k] ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
+    ${PERMS.map(([k, l]) => `<tr><td>${l}</td><td style="text-align:center"><input type="checkbox" checked disabled style="width:19px;height:19px"></td>${['cajero', 'mesero', 'cocina'].map(r => `<td style="text-align:center"><input type="checkbox" style="width:19px;height:19px;accent-color:var(--accent)" data-ch="perm" data-r="${r}" data-k="${k}" ${((p[r] || {})[k] ?? (DEFAULT_PERMS[r] || {})[k]) ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
     </tbody></table><p class="muted small pad">El administrador siempre tiene todos los permisos. Los cambios aplican de inmediato en todos los equipos.</p></div>`;
   }
   if (t === 'pagos') body = `<div class="grid2" style="max-width:900px;align-items:start">
@@ -2149,19 +2229,23 @@ A.editUser = el => {
   openModal(`${mHead(u ? 'Editar usuario' : 'Nuevo usuario')}<div class="mb">
     <div class="field"><label>Nombre</label><input class="inp" id="us_n" value="${esc(u ? u.nombre : '')}" autofocus></div>
     <div class="grid2"><div class="field"><label>Rol</label><select class="inp" id="us_r">${Object.keys(ROLES).map(k => [k, rolName(k)]).map(([k, l]) => `<option value="${k}" ${u && u.rol === k ? 'selected' : (!u && k === 'mesero' ? 'selected' : '')}>${l}</option>`).join('')}</select></div>
-    <div class="field"><label>PIN (4 números)</label><input class="inp" id="us_p" inputmode="numeric" maxlength="4" placeholder="${u ? 'Vacío = no cambiar' : '4 dígitos'}"></div></div>
+    <div class="field"><label>Contraseña (4 números)</label><input class="inp" id="us_p" inputmode="numeric" maxlength="4" placeholder="${u ? 'Vacío = no cambiar' : '4 números'}"></div></div>
+    <p class="muted small">El usuario para entrar es el nombre, tal como lo escribas aquí.</p>
     <label class="chk"><input type="checkbox" id="us_a" ${!u || u.activo ? 'checked' : ''}> Activo</label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveUser" data-primary>Guardar</button></div>`);
 };
 A.saveUser = async () => {
   const n = $('#us_n').value.trim(), r = $('#us_r').value, p = $('#us_p').value.trim(), a = $('#us_a').checked;
   if (!n) return toast('Escribe el nombre', 'err');
-  if ((!MODAL.id || p) && !/^\d{4}$/.test(p)) return toast('El PIN debe tener 4 números', 'err');
+  if (norm(n).replace(/\s+/g, '') === 'mantenimiento') return toast('"Mantenimiento" es el usuario de soporte de NEXORA. Usa otro nombre.', 'err');
+  if (S.usuarios.some(x => x.id !== MODAL.id && norm(x.nombre).replace(/\s+/g, ' ').trim() === norm(n).replace(/\s+/g, ' ').trim())) return toast('Ya existe un usuario con ese nombre. Usa otro (por ejemplo con el apellido).', 'err');
+  if ((!MODAL.id || p) && !/^\d{4}$/.test(p)) return toast('La contraseña debe tener 4 números', 'err');
   const otrosAdmin = S.usuarios.filter(u => u.id !== MODAL.id && u.rol === 'admin' && u.activo).length;
   if (MODAL.id && (r !== 'admin' || !a) && !otrosAdmin && (S.usuarios.find(u => u.id === MODAL.id) || {}).rol === 'admin') return toast('Debe quedar al menos un administrador activo', 'err');
   const d = { nombre: n, rol: r, activo: a };
   if (p) d.pin = await hashPin(p, DB.nid);
   if (MODAL.id) DB.update('usuarios', MODAL.id, d); else DB.add('usuarios', { ...d, orden: S.usuarios.length + 1 });
+  logAct('ajustes', `${MODAL.id ? 'Editó' : 'Creó'} el usuario ${n} (${rolName(r)})${p ? ' · contraseña ' + (MODAL.id ? 'cambiada' : 'asignada') : ''}${!a ? ' · inactivo' : ''}`);
   closeModal(); toast('Usuario guardado', 'ok');
 };
 A.reiniciarNeg = () => {
@@ -2267,6 +2351,7 @@ const CH = {
     const p = JSON.parse(JSON.stringify(S.cfg.permisos || {}));
     p[el.dataset.r] = p[el.dataset.r] || {}; p[el.dataset.r][el.dataset.k] = el.checked ? 1 : 0;
     DB.update('config', 'general', { permisos: p });
+    logAct('ajustes', `Permiso "${(PERMS.find(x => x[0] === el.dataset.k) || [])[1] || el.dataset.k}" para ${rolName(el.dataset.r)}: ${el.checked ? 'activado' : 'desactivado'}`);
   },
   prodActivo: el => DB.update('productos', el.dataset.id, { activo: el.checked }),
   ndTel: async el => {
@@ -2305,10 +2390,6 @@ document.addEventListener('focusout', e => {
 });
 document.addEventListener('change', e => { const k = e.target.dataset && e.target.dataset.ch; if (k && CH[k]) CH[k](e.target, e); });
 document.addEventListener('keydown', e => {
-  if (S.screen === 'pin' && PINST.userId) {
-    if (/^\d$/.test(e.key)) pinPress(e.key); else if (e.key === 'Backspace') A.pinDel(); else if (e.key === 'Escape') A.pinBack();
-    return;
-  }
   if (e.key === 'Escape' && modalOpen()) { closeModal(); return; }
   if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
     const t = e.target;
@@ -2495,7 +2576,9 @@ function adForm(l) {
     <div class="grid2"><div class="field"><label>Link de pago (opcional)</label><input class="inp" id="af_link" value="${esc(d.linkPago || '')}" placeholder="https://…"></div>
     <div class="field"><label>Tu WhatsApp de cobro</label><input class="inp" id="af_wa" inputmode="tel" value="${esc(d.whatsapp || '')}"></div></div>
     ${nuevo ? '' : `<div class="field"><label>Estado</label><select class="inp" id="af_est"><option value="activa">Activa</option><option value="suspendida" ${d.estado === 'suspendida' ? 'selected' : ''}>Suspendida (se bloquea al cambiar de usuario o abrir la app)</option></select></div>`}
-    <div class="field"><label>Notas internas</label><input class="inp" id="af_not" value="${esc(d.notas || '')}"></div>
+    <div class="grid2"><div class="field"><label>Clave de mantenimiento (4 números)</label><input class="inp" id="af_mant" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${d.mantHash ? 'Ya tiene · vacío = no cambiar' : aj.mantPin ? 'Vacío = tu clave general' : '4 números'}"></div>
+    <div class="field"><label>Notas internas</label><input class="inp" id="af_not" value="${esc(d.notas || '')}"></div></div>
+    <p class="muted small">Con el usuario <b>Mantenimiento</b> y esta clave entras al negocio con acceso total. El cliente no lo ve en su lista ni lo puede cambiar.</p>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="adGuardar" data-primary>${nuevo ? 'Crear licencia' : 'Guardar'}</button></div>`, true);
 }
 A.adNuevo = () => adForm(null);
@@ -2512,6 +2595,11 @@ A.adGuardar = async () => {
     diasGracia: Math.min(30, Math.max(0, parseInt($('#af_g').value, 10) || 0)), instrucciones: $('#af_ins').value.trim(), linkPago: link,
     whatsapp: $('#af_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, notas: $('#af_not').value.trim(),
   };
+  const mp = $('#af_mant').value.trim();
+  if (mp && !/^\d{4}$/.test(mp)) return toast('La clave de mantenimiento debe tener 4 números', 'err');
+  const mGen = (S.ad.aj || {}).mantPin;
+  if (mp) data.mantHash = await hashPin(mp, id);
+  else if (!MODAL.id && mGen) data.mantHash = await hashPin(mGen, id);
   if (MODAL.id) { data.estado = $('#af_est').value; DB.rset('licencias/' + id, data); closeModal(); toast('Guardado', 'ok'); return; }
   try { if (await DB.rget('licencias/' + id)) return toast('Ese código ya tiene licencia', 'err'); } catch (e) { return toast('No se pudo verificar: ' + (e.code || e.message), 'err'); }
   DB.rset('licencias/' + id, { ...data, estado: 'activa', creado: now(), pagosCount: 0 }, false);
@@ -2528,14 +2616,19 @@ A.adAjustes = () => {
     <div class="field"><label>Tu WhatsApp de cobro</label><input class="inp" id="aj2_wa" value="${esc(aj.whatsapp || SOPORTE_WHATSAPP)}"></div></div>
     <div class="field"><label>Instrucciones de pago</label><textarea class="inp" id="aj2_ins" placeholder="Ej: Nequi 300 000 0000 a nombre de …">${esc(aj.instrucciones || '')}</textarea></div>
     <div class="field"><label>Link de pago (opcional)</label><input class="inp" id="aj2_link" value="${esc(aj.linkPago || '')}" placeholder="https://…"></div>
+    <div class="field"><label>Tu clave de mantenimiento (4 números)</label><input class="inp" id="aj2_mant" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(aj.mantPin || '')}" placeholder="Ej: 2580"><div class="muted small" style="margin-top:4px">Con el usuario <b>Mantenimiento</b> y esta clave entras a cualquier negocio con acceso total. Al guardar se aplica a todos tus clientes.</div></div>
     <label class="chk"><input type="checkbox" id="aj2_all"> Actualizar también las instrucciones, el link y el WhatsApp de todos los clientes</label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="adGuardarAj" data-primary>Guardar</button></div>`);
 };
-A.adGuardarAj = () => {
+A.adGuardarAj = async () => {
   let val = parseMoney($('#aj2_val').value); if (val > 0 && val < 1000) val *= 1000;
   const link = $('#aj2_link').value.trim(); if (link && !safeUrl(link)) return toast('El link de pago debe empezar por https://', 'err');
-  const d = { valor: val || 99000, whatsapp: $('#aj2_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, instrucciones: $('#aj2_ins').value.trim(), linkPago: link };
+  const mp = $('#aj2_mant').value.trim();
+  if (mp && !/^\d{4}$/.test(mp)) return toast('La clave de mantenimiento debe tener 4 números', 'err');
+  const antes = (S.ad.aj || {}).mantPin || '', lics = [...(S.ad.lics || [])];
+  const d = { valor: val || 99000, whatsapp: $('#aj2_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, instrucciones: $('#aj2_ins').value.trim(), linkPago: link, mantPin: mp };
   DB.rset('nexora/ajustes', d);
+  if (mp && mp !== antes) for (const l of lics) DB.rset('licencias/' + l.id, { mantHash: await hashPin(mp, l.id) });
   if ($('#aj2_all').checked) (S.ad.lics || []).forEach(l => DB.rset('licencias/' + l.id, { instrucciones: d.instrucciones, linkPago: d.linkPago, whatsapp: d.whatsapp }));
   closeModal(); toast('Datos de cobro guardados', 'ok');
 };
@@ -2551,7 +2644,7 @@ function stockTag(p) {
   const cls = st <= 0 ? 'bad' : (p.stockMin && st <= p.stockMin ? 'warn' : '');
   return `<span class="stk ${cls}">${num(st)}</span>`;
 }
-const MOV_LBL = { entrada: ['ok', 'Entrada'], ajuste: ['warn', 'Ajuste'], conteo: ['info', 'Conteo'], importacion: ['', 'Importación'] };
+const MOV_LBL = { entrada: ['ok', 'Entrada'], ajuste: ['warn', 'Ajuste'], conteo: ['info', 'Conteo'], importacion: ['', 'Importación'], devolucion: ['ok', 'Devolución'] };
 
 function vInventario() {
   if (S.invmovs == null) {
@@ -2602,60 +2695,83 @@ CH.prCs = el => { const b = $('#pr_stk'); if (b) b.classList.toggle('hidden', !e
 const rowFilter = el => $$('#modal [data-n]').forEach(r => { r.style.display = norm(r.dataset.n).includes(norm(el.value)) ? '' : 'none'; });
 IN.invFiltro = rowFilter;
 
-/* ---------- entrada de mercancía (factura del proveedor) ---------- */
+/* ---------- entrada de mercancía: cada producto por cajas o por unidades ---------- */
+const pc = p => Math.max(0, parseInt(p.porCaja, 10) || 0);
+const qv = id => { const el = $(id); return el ? (parseFloat(el.value) || 0) : 0; };
+const ieModo = i => { const m = $('#ie_m' + i); return m ? m.value : 'und'; };
 A.invEntrada = () => {
   const ps = S.productos.filter(p => p.controlStock).sort(byCatNombre);
   const verC = perm('costos');
   MODAL = { type: 'invEntrada', ids: ps.map(p => p.id) };
   openModal(`${mHead('Entrada de mercancía')}<div class="mb">
-    <p class="muted small" style="margin-bottom:10px">Escribe cuántas unidades llegaron de cada producto. Deja en blanco los que no llegaron.</p>
+    <p class="muted small" style="margin-bottom:10px">Escribe cuánto llegó de cada producto y elige si es por <b>cajas</b> o por <b>unidades</b>. Deja en blanco los que no llegaron.</p>
     <div class="grid2"><div class="field"><label>Proveedor / número de factura</label><input class="inp" id="ie_nota" placeholder="Ej: Estanco, factura 1234"></div>
     <div class="field"><label>Buscar producto</label><input class="inp" data-in="invFiltro" placeholder="Filtrar la lista…"></div></div>
-    <div class="imp-prev" style="max-height:48vh"><table class="tbl"><thead><tr><th>Producto</th><th class="num">Stock</th><th class="num">Llegan</th>${verC ? '<th class="num">Costo unidad</th>' : ''}</tr></thead><tbody>
-    ${ps.map((p, i) => `<tr data-n="${esc(p.nombre)}"><td>${esc(p.nombre)}</td><td class="num">${stockTag(p)}</td>
-      <td class="num"><input class="inp" id="ie_q${i}" type="number" min="0" step="any" style="width:90px;min-height:36px;text-align:right"></td>
-      ${verC ? `<td class="num"><input class="inp money" id="ie_c${i}" inputmode="numeric" style="width:110px;min-height:36px;text-align:right" value="${p.costo ? num(p.costo) : ''}"></td>` : ''}</tr>`).join('')}
+    <div class="imp-prev" style="max-height:48vh"><table class="tbl ie-tbl"><thead><tr><th>Producto</th><th class="num">Hay</th><th class="num">Llegan</th><th>Por</th>${verC ? '<th class="num">Costo</th>' : ''}<th class="num">Suma</th></tr></thead><tbody>
+    ${ps.map((p, i) => { const c = pc(p); return `<tr data-n="${esc(p.nombre)}"><td class="ie-n">${esc(p.nombre)}</td><td class="num ie-h"><span class="ie-hl">Hay </span>${stockTag(p)}</td>
+      <td class="num ie-q"><input class="inp" id="ie_q${i}" data-in="ieRow" data-i="${i}" type="number" min="0" step="any" placeholder="0" style="width:80px;min-height:36px;text-align:right"></td>
+      <td class="ie-m">${c ? `<select class="inp" id="ie_m${i}" data-ch="ieModo" data-i="${i}" style="width:auto;min-height:36px;padding:4px 8px"><option value="cajas">Cajas de ${c}</option><option value="und">Unidades</option></select>` : '<span class="small muted">Unidades</span>'}</td>
+      ${verC ? `<td class="num ie-c"><input class="inp money" id="ie_c${i}" inputmode="numeric" style="width:110px;min-height:36px;text-align:right" value="${p.costo ? num(c ? p.costo * c : p.costo) : ''}"><div class="muted small" id="ie_cl${i}">${c ? 'por caja' : 'por unidad'}</div></td>` : ''}
+      <td class="num ie-t"><b id="ie_t${i}">—</b></td></tr>`; }).join('')}
     </tbody></table></div>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="invGuardarEntrada">Guardar entrada</button></div>`, true);
+};
+const ieUnits = (i, p) => qv('#ie_q' + i) * (ieModo(i) === 'cajas' ? pc(p) : 1);
+IN.ieRow = el => {
+  const i = +el.dataset.i, p = gProd(MODAL.ids[i]); if (!p) return;
+  const t = ieUnits(i, p); $('#ie_t' + i).textContent = t ? '+' + num(t) + ' und' : '—';
+};
+CH.ieModo = el => {
+  const i = +el.dataset.i, p = gProd(MODAL.ids[i]); if (!p) return;
+  const cajas = el.value === 'cajas', c = pc(p);
+  const ci = $('#ie_c' + i); if (ci && p.costo) ci.value = num(cajas ? p.costo * c : p.costo);
+  const cl = $('#ie_cl' + i); if (cl) cl.textContent = cajas ? 'por caja' : 'por unidad';
+  IN.ieRow({ dataset: { i } });
 };
 A.invGuardarEntrada = () => {
   const nota = $('#ie_nota').value.trim(); let n = 0, valor = 0;
   MODAL.ids.forEach((id, i) => {
-    const q = parseFloat($('#ie_q' + i).value); if (!(q > 0)) return;
     const p = gProd(id); if (!p) return;
-    const cEl = $('#ie_c' + i); let c = cEl ? parseMoney(cEl.value) : (Number(p.costo) || 0);
-    if (c > 0 && c < 1000 && (p.precio || 0) >= 1000) c *= 1000;
+    const cajas = ieModo(i) === 'cajas', c = pc(p), cant = qv('#ie_q' + i), q = cajas ? cant * c : cant;
+    if (!(q > 0)) return;
+    const cEl = $('#ie_c' + i);
+    let cu = Number(p.costo) || 0;
+    if (cEl) { let v = parseMoney(cEl.value); if (v > 0 && v < 1000 && !cajas && (p.precio || 0) >= 1000) v *= 1000; if (v > 0) cu = cajas ? Math.round(v / c) : v; }
     DB.inc('productos', id, 'stock', q);
-    if (cEl && c > 0 && c !== Number(p.costo)) DB.update('productos', id, { costo: c });
-    DB.add('invmov', { productoId: id, nombre: p.nombre, tipo: 'entrada', cant: q, costo: c, nota, usuario: S.user.nombre, fecha: now() });
-    n++; valor += q * c;
+    if (cEl && cu > 0 && cu !== Number(p.costo)) DB.update('productos', id, { costo: cu });
+    const det = cajas ? `${cant} ${cant === 1 ? 'caja' : 'cajas'} de ${c}` : '';
+    DB.add('invmov', { productoId: id, nombre: p.nombre, tipo: 'entrada', cant: q, costo: cu, nota: [det, nota].filter(Boolean).join(' · '), usuario: S.user.nombre, fecha: now() });
+    n++; valor += q * cu;
   });
   if (!n) return toast('Escribe la cantidad de al menos un producto', 'err');
+  logAct('inventario', `Entrada de mercancía: ${n} productos${nota ? ' · ' + nota : ''}`, { monto: valor });
   closeModal(); S.invmovs = null; toast(`Entrada guardada · ${n} productos${perm('costos') ? ' · ' + money(valor) : ''}`, 'ok'); render();
 };
 
-/* ---------- conteo físico (descuadre) ---------- */
+/* ---------- conteo físico (descuadre), en unidades ---------- */
 A.invConteo = () => {
   const ps = S.productos.filter(p => p.controlStock).sort(byCatNombre);
   const verC = perm('costos');
   MODAL = { type: 'invConteo', ids: ps.map(p => p.id), sis: ps.map(p => Number(p.stock) || 0), cost: ps.map(p => Number(p.costo) || 0) };
   openModal(`${mHead('Conteo físico')}<div class="mb">
-    <p class="muted small" style="margin-bottom:10px">Cuenta lo que hay en neveras y bodega y escríbelo en "Contado". Los que dejes en blanco no se tocan.</p>
+    <p class="muted small" style="margin-bottom:10px">Cuenta las unidades que hay en neveras y bodega y escríbelas en "Contado". Los que dejes en blanco no se tocan.</p>
     <div class="field"><input class="inp" data-in="invFiltro" placeholder="Buscar producto…"></div>
     <div class="imp-prev" style="max-height:46vh"><table class="tbl"><thead><tr><th>Producto</th><th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferencia</th>${verC ? '<th class="num">Valor</th>' : ''}</tr></thead><tbody>
     ${ps.map((p, i) => `<tr data-n="${esc(p.nombre)}"><td>${esc(p.nombre)}</td><td class="num">${num(MODAL.sis[i])}</td>
-      <td class="num"><input class="inp" id="ic_${i}" data-in="icRow" data-i="${i}" type="number" min="0" step="any" style="width:90px;min-height:36px;text-align:right"></td>
+      <td class="num"><input class="inp" id="ic_${i}" data-in="icRow" type="number" min="0" step="any" style="width:90px;min-height:36px;text-align:right"></td>
       <td class="num" id="icd_${i}">—</td>${verC ? `<td class="num" id="icv_${i}">—</td>` : ''}</tr>`).join('')}
     </tbody></table></div>
     <div class="paysum okk" id="ic_tot" style="margin-top:12px"><span>Descuadre</span><span>$ 0</span></div>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="invGuardarConteo">Guardar conteo</button></div>`, true);
 };
+const icContado = i => { const u = $('#ic_' + i); return !u || u.value === '' ? null : (parseFloat(u.value) || 0); };
 IN.icRow = () => {
   let tot = 0, any = false;
   MODAL.ids.forEach((id, i) => {
-    const el = $('#ic_' + i), d = $('#icd_' + i), v = $('#icv_' + i); if (!el) return;
-    if (el.value === '') { d.textContent = '—'; d.style.color = ''; if (v) v.textContent = '—'; return; }
-    any = true; const dif = (parseFloat(el.value) || 0) - MODAL.sis[i]; tot += dif * MODAL.cost[i];
+    const d = $('#icd_' + i), v = $('#icv_' + i); if (!d) return;
+    const cont = icContado(i);
+    if (cont === null) { d.textContent = '—'; d.style.color = ''; if (v) v.textContent = '—'; return; }
+    any = true; const dif = cont - MODAL.sis[i]; tot += dif * MODAL.cost[i];
     d.textContent = (dif > 0 ? '+' : '') + num(dif); d.style.color = dif < 0 ? 'var(--bad)' : dif > 0 ? 'var(--ok)' : '';
     if (v) v.textContent = money(dif * MODAL.cost[i]);
   });
@@ -2666,14 +2782,15 @@ IN.icRow = () => {
 A.invGuardarConteo = () => {
   let n = 0, tot = 0;
   MODAL.ids.forEach((id, i) => {
-    const el = $('#ic_' + i); if (!el || el.value === '') return;
+    const cont = icContado(i); if (cont === null) return;
     const p = gProd(id); if (!p) return;
-    const cont = parseFloat(el.value) || 0, dif = cont - MODAL.sis[i];
+    const dif = cont - MODAL.sis[i];
     n++; tot += dif * MODAL.cost[i];
     if (dif !== 0) DB.inc('productos', id, 'stock', dif);
     DB.add('invmov', { productoId: id, nombre: p.nombre, tipo: 'conteo', cant: dif, sistema: MODAL.sis[i], contado: cont, costo: MODAL.cost[i], nota: dif ? (dif < 0 ? 'Faltante' : 'Sobrante') : 'Cuadra', usuario: S.user.nombre, fecha: now() });
   });
   if (!n) return toast('Escribe lo contado de al menos un producto', 'err');
+  logAct('inventario', `Conteo físico de ${n} productos · ${tot < 0 ? 'faltante' : tot > 0 ? 'sobrante' : 'cuadra'} ${money(Math.abs(tot))}`, { monto: tot });
   closeModal(); S.invmovs = null;
   toast(`Conteo guardado · ${n} productos${perm('costos') && tot ? ' · ' + (tot < 0 ? 'faltante ' : 'sobrante ') + money(Math.abs(tot)) : ''}`, tot < 0 ? 'err' : 'ok'); render();
 };
@@ -2699,6 +2816,7 @@ A.invGuardarAjuste = () => {
   const p = gProd(MODAL.id); const cant = MODAL.signo * q;
   DB.inc('productos', p.id, 'stock', cant);
   DB.add('invmov', { productoId: p.id, nombre: p.nombre, tipo: 'ajuste', cant, costo: Number(p.costo) || 0, nota: m, usuario: S.user.nombre, fecha: now() });
+  logAct('inventario', `Ajuste de ${p.nombre}: ${cant > 0 ? '+' : ''}${cant}`, { motivo: m });
   closeModal(); S.invmovs = null; toast('Stock ajustado', 'ok'); render();
 };
 
@@ -2712,7 +2830,7 @@ async function loadXLSX() {
   for (const u of XLSX_URLS) { try { XLSXmod = await import(u); return XLSXmod; } catch (e) { console.warn('No cargó', u, e); } }
   throw new Error('No se pudo cargar el lector de Excel. Revisa la conexión a internet.');
 }
-const IMP_CAMPOS = [['nombre', 'Producto *'], ['precio', 'Precio de venta *'], ['costo', 'Costo'], ['stock', 'Stock'], ['categoria', 'Categoría'], ['stockMin', 'Stock mínimo'], ['comanda', 'Va a comanda (Sí/No)'], ['opciones', 'Opciones / sabores']];
+const IMP_CAMPOS = [['nombre', 'Producto *'], ['precio', 'Precio de venta *'], ['costo', 'Costo'], ['stock', 'Stock'], ['categoria', 'Categoría'], ['stockMin', 'Stock mínimo'], ['comanda', 'Va a comanda (Sí/No)'], ['opciones', 'Opciones / sabores'], ['porCaja', 'Unidades por caja']];
 const IMP_RX = {
   nombre: /^(producto|productos|nombre|descripcion|articulo|item|referencia)/,
   precio: /^(precio\s*(de\s*)?venta|pvp|precio|valor\s*venta|precio\s*unitario)$/,
@@ -2722,6 +2840,7 @@ const IMP_RX = {
   stockMin: /minimo|^min\b/,
   comanda: /comanda|cocina|barra|prepara/,
   opciones: /opcion|sabor|variante/,
+  porCaja: /(unidades|und|unid)\.?\s*(por|x)\s*caja|^por\s*caja|^x\s*caja|^caja\s*(x|de)/,
 };
 const colLetter = c => { let s = ''; c++; while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
 function toNum(v) {
@@ -2771,6 +2890,7 @@ function impRows() {
       categoria: String(cell(r, 'categoria') ?? '').trim(),
       comanda: m.comanda < 0 ? true : (cm != null && /^(si|s|x|1|true|yes)$/.test(norm(cm).trim())),
       opciones: String(cell(r, 'opciones') ?? '').split(',').map(x => x.trim()).filter(Boolean),
+      porCaja: Math.max(0, Math.round(toNum(cell(r, 'porCaja')) || 0)),
     });
   });
   const rows = [...out.values()];
@@ -2779,7 +2899,7 @@ function impRows() {
 }
 function impHTML() {
   if (!IMP || IMP.step === 1) return `${mHead('Importar productos desde Excel')}<div class="mb">
-    <p style="margin-bottom:10px">Sube el archivo de Excel (.xlsx) o .csv con tus productos. La app reconoce estas columnas: <b>Producto, Precio de venta, Costo, Stock, Categoría, Stock mínimo, Comanda y Opciones</b>. No importa el orden: después te deja revisar qué columna es cada cosa.</p>
+    <p style="margin-bottom:10px">Sube el archivo de Excel (.xlsx) o .csv con tus productos. La app reconoce estas columnas: <b>Producto, Precio de venta, Costo, Stock, Categoría, Stock mínimo, Comanda, Opciones y Unidades por caja</b>. No importa el orden: después te deja revisar qué columna es cada cosa.</p>
     <div class="field"><input class="inp" type="file" id="imp_file" data-ch="impFile" accept=".xlsx,.xls,.csv"></div>
     ${IMP && IMP.err ? `<p class="small" style="color:var(--bad)">${esc(IMP.err)}</p>` : ''}${IMP && IMP.loading ? '<p class="muted small">Leyendo el archivo…</p>' : ''}
     <p class="muted small">¿No tienes el archivo armado? <button class="lnk" data-act="impPlantilla">Descarga la plantilla</button>, llénala y súbela.</p>
@@ -2838,6 +2958,7 @@ A.impImportar = () => {
   rows.forEach(r => {
     const d = { nombre: r.nombre, precio: r.precio, costo: r.costo, cocina: r.comanda, activo: true };
     if (IMP.map.opciones >= 0) d.opciones = r.opciones;
+    if (IMP.map.porCaja >= 0) d.porCaja = r.porCaja;
     if (r.stock != null) { d.controlStock = true; d.stock = r.stock; d.stockMin = r.stockMin || 0; }
     if (r.existe) {
       if (!upd) { usadas.add(r.existe.categoriaId); return; }
@@ -2855,6 +2976,7 @@ A.impImportar = () => {
     catAntes.filter(c => !usadas.has(c.id)).forEach(c => DB.del('categorias', c.id));
   }
   DB.add('invmov', { productoId: '', nombre: `${nNew + nUpd} productos desde ${IMP.fileName}`, tipo: 'importacion', cant: 0, nota: `${nNew} nuevos, ${nUpd} actualizados`, usuario: S.user.nombre, fecha: now() });
+  logAct('inventario', `Importó ${nNew + nUpd} productos desde Excel (${nNew} nuevos, ${nUpd} actualizados${nDel ? ', ' + nDel + ' borrados' : ''})`);
   closeModal(); S.invmovs = null; IMP = null;
   toast(`Importación lista · ${nNew} nuevos · ${nUpd} actualizados${nDel ? ' · ' + nDel + ' borrados' : ''}`, 'ok'); S.vCat = 'all'; S.catId = 'all'; S.prodCat = 'all'; render();
 };
@@ -2934,6 +3056,7 @@ A.vdAbrirCaja = () => {
   if (S.arqueo) return;
   let base = parseMoney($('#vd_base').value); if (base > 0 && base < 1000) base *= 1000;
   DB.add('arqueos', { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base });
+  logAct('caja', `Abrió la caja con base de ${money(base)}`);
   $('#vd_base').value = ''; toast('Caja abierta · ya puedes vender', 'ok');
 };
 A.vCobrar = el => {
@@ -2962,6 +3085,7 @@ function vFinalizar(st) {
   };
   const id = DB.add('ventas', v);
   moverStock(items, -1);
+  logAct('venta', `Venta #${numero} · ${money(subtotal + propina)} · ${v.pagos.map(p => p.medio).join(' + ')} · ${resumenItems(items)}`, { ventaId: id, monto: subtotal + propina });
   const coc = items.filter(i => i.cocina);
   if (coc.length) DB.add('comandas', { ventaId: id, tipo: 'mostrador', titulo: 'Venta #' + numero, meseroNombre: S.user.nombre, items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
   const imprimir = $('#pay_pr').checked; localStorage.setItem('nexorapos_print', imprimir ? '1' : '0');
@@ -2986,6 +3110,95 @@ A.vAMesa = el => {
   S.cart = []; saveCart(); closeModal(); openPedido(id);
   toast('Productos pasados a la mesa · toca "Enviar" para confirmarlos');
 };
+
+/* =====================================================================
+   REPORTES: ranking de meseros y registro de actividad
+   ===================================================================== */
+S.vTab = 'dia'; S.mPer = 'hoy'; S.mData = null; S.aData = null; S.aUser = ''; S.aTipo = '';
+function ventasTabs() {
+  const t = [['dia', 'Ventas del día'], ['meseros', 'Ranking de meseros']];
+  if (perm('actividad')) t.push(['actividad', 'Registro de actividad']);
+  return `<div class="tabs" style="margin-bottom:16px">${t.map(([k, l]) => `<button class="${S.vTab === k ? 'on' : ''}" data-act="vTab" data-t="${k}">${l}</button>`).join('')}</div>`;
+}
+A.vTab = el => { S.vTab = el.dataset.t; S.mData = null; S.aData = null; render(); };
+
+/* ---------- ranking de meseros ---------- */
+const PERIODOS = [['hoy', 'Hoy'], ['7d', 'Últimos 7 días'], ['mes', 'Este mes'], ['mesant', 'Mes anterior']];
+function rangoPeriodo(k) {
+  const d0 = startOfDay(), D = 864e5, n = new Date();
+  const ini = new Date(n.getFullYear(), n.getMonth(), 1).getTime();
+  if (k === '7d') return [d0 - 6 * D, d0 + D];
+  if (k === 'mes') return [ini, d0 + D];
+  if (k === 'mesant') return [new Date(n.getFullYear(), n.getMonth() - 1, 1).getTime(), ini];
+  return [d0, d0 + D];
+}
+function vMeseros() {
+  const head = topHTML('Ventas');
+  if (!S.mData || S.mData.k !== S.mPer) {
+    const k = S.mPer, [a, b] = rangoPeriodo(k);
+    S.mData = { k, list: null };
+    DB.query('ventas', [['cerradaEn', '>=', a], ['cerradaEn', '<', b]]).then(l => { if (S.mData && S.mData.k === k) { S.mData.list = l; render(); } }).catch(e => { console.error(e); toast('No se pudieron cargar las ventas', 'err'); });
+  }
+  const per = `<div class="tabs" style="margin-bottom:14px">${PERIODOS.map(([k, l]) => `<button class="${S.mPer === k ? 'on' : ''}" data-act="mPer" data-p="${k}">${l}</button>`).join('')}</div>`;
+  const list = S.mData.list;
+  if (!list) return head + `<div class="wrap">${ventasTabs()}${per}<div class="card empty">Cargando…</div></div>`;
+  const R = {};
+  const get = n => R[n] = R[n] || { n, cuentas: 0, ventas: 0, prop: 0, prods: 0, anul: 0, anulVal: 0 };
+  list.forEach(v => {
+    if (v.estado === 'cerrada') {
+      const r = get(v.meseroNombre || v.cerradaPor || 'Sin asignar');
+      r.cuentas++; r.ventas += v.total || 0; r.prop += v.propina || 0;
+      r.prods += sum((v.items || []).filter(i => i.estado !== 'anulado'), i => i.cant);
+    }
+    (v.items || []).filter(i => i.estado === 'anulado' && i.anuladoPor).forEach(i => { const r = get(i.anuladoPor); r.anul += i.cant; r.anulVal += i.precio * i.cant; });
+    if (v.estado === 'anulada' && v.anuladaPor && v.anuladaMotivo !== 'Sin consumo') { const r = get(v.anuladaPor); const t = calc(v).total; if (t) { r.anul += sum((v.items || []).filter(i => i.estado !== 'anulado'), i => i.cant); r.anulVal += t; } }
+  });
+  const rows = Object.values(R).filter(r => r.cuentas || r.anul).sort((a, b) => b.ventas - a.ventas);
+  const max = Math.max(1, ...rows.map(r => r.ventas));
+  const top = rows[0];
+  const uByName = n => S.usuarios.find(u => u.nombre === n) || { id: n, nombre: n };
+  return head + `<div class="wrap">${ventasTabs()}${per}
+    ${top && top.ventas ? `<div class="card pad" style="margin-bottom:14px;display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#fff8e1,#fff)">
+      <div style="font-size:34px">🏆</div><div><div class="muted small">Quien más vendió · ${PERIODOS.find(p => p[0] === S.mPer)[1].toLowerCase()}</div><div style="font-size:21px;font-weight:800">${esc(top.n)} · ${money(top.ventas)}</div><div class="muted small">${top.cuentas} ${top.cuentas === 1 ? 'venta' : 'ventas'} · ${top.prods} productos</div></div></div>` : ''}
+    <div class="card" style="overflow:auto">${rows.length ? `<table class="tbl"><thead><tr><th>#</th><th>Mesero / vendedor</th><th class="num">Ventas</th><th style="min-width:140px"></th><th class="num">Cuentas</th><th class="num">Productos</th><th class="num">Ticket prom.</th><th class="num">Propinas</th><th class="num">Anulado</th></tr></thead><tbody>
+      ${rows.map((r, i) => `<tr><td><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b></td><td><div class="row">${avatar(uByName(r.n), 30)}<b>${esc(r.n)}</b></div></td>
+        <td class="num"><b>${money(r.ventas)}</b></td><td><div style="height:10px;border-radius:6px;background:var(--bg)"><div style="height:10px;border-radius:6px;background:var(--accent);width:${Math.round(r.ventas / max * 100)}%"></div></div></td>
+        <td class="num">${r.cuentas}</td><td class="num">${r.prods}</td><td class="num">${money(r.cuentas ? r.ventas / r.cuentas : 0)}</td><td class="num">${money(r.prop)}</td>
+        <td class="num" style="color:${r.anul ? 'var(--bad)' : 'inherit'}">${r.anul ? `${r.anul} und · ${money(r.anulVal)}` : '—'}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">No hay ventas en este periodo</div>'}</div>
+    <p class="muted small" style="margin-top:10px">Las ventas de mesa cuentan para el mesero asignado a la mesa; las ventas rápidas, para quien las cobró. "Anulado" es lo que esa persona anuló.</p>
+  </div>`;
+}
+A.mPer = el => { S.mPer = el.dataset.p; render(); };
+
+/* ---------- registro de actividad ---------- */
+const ACT_LBL = { venta: ['ok', 'Venta'], anulacion: ['bad', 'Anulación'], descuento: ['warn', 'Descuento'], caja: ['info', 'Caja'], inventario: ['', 'Inventario'], pedido: ['', 'Pedido'], mesa: ['', 'Mesa'], sesion: ['', 'Sesión'], ajustes: ['warn', 'Ajustes'] };
+function vActividad() {
+  const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${dayInput(now())}">`);
+  if (!S.aData || S.aData.dia !== S.ventasDia) {
+    const dia = S.ventasDia, st = new Date(dia + 'T00:00:00').getTime();
+    S.aData = { dia, list: null };
+    DB.query('actividad', [['fecha', '>=', st], ['fecha', '<', st + 864e5]]).then(l => { if (S.aData && S.aData.dia === dia) { S.aData.list = l.sort((a, b) => b.fecha - a.fecha); render(); } }).catch(e => { console.error(e); toast('No se pudo cargar el registro', 'err'); });
+  }
+  const list = S.aData.list;
+  const filtros = `<div class="row wrap" style="margin-bottom:12px">
+    <select class="inp" style="width:auto;min-height:38px" data-ch="aUser"><option value="">Todas las personas</option>${S.usuarios.map(u => `<option ${S.aUser === u.nombre ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}</select>
+    <select class="inp" style="width:auto;min-height:38px" data-ch="aTipo"><option value="">Todo</option>${Object.entries(ACT_LBL).map(([k, l]) => `<option value="${k}" ${S.aTipo === k ? 'selected' : ''}>${l[1]}</option>`).join('')}</select>
+    <button class="btn sm" data-act="aRefresh">Actualizar</button></div>`;
+  if (!list) return head + `<div class="wrap">${ventasTabs()}${filtros}<div class="card empty">Cargando…</div></div>`;
+  const ls = list.filter(a => (!S.aUser || a.usuario === S.aUser) && (!S.aTipo || a.tipo === S.aTipo));
+  const nAn = list.filter(a => a.tipo === 'anulacion').length;
+  return head + `<div class="wrap">${ventasTabs()}${filtros}
+    ${nAn ? `<div class="lic-bar warn" style="border-radius:12px;margin-bottom:12px;text-align:left">Este día hay ${nAn} ${nAn === 1 ? 'anulación' : 'anulaciones'}. <button data-act="aSoloAnul">Ver solo anulaciones</button></div>` : ''}
+    <div class="card" style="overflow:auto">${ls.length ? `<table class="tbl"><thead><tr><th>Hora</th><th>Quién</th><th>Qué</th><th>Detalle</th></tr></thead><tbody>
+      ${ls.map(a => { const lb = ACT_LBL[a.tipo] || ['', a.tipo]; return `<tr><td class="small" style="white-space:nowrap">${hhmm(a.fecha)}</td><td style="white-space:nowrap"><b>${esc(a.usuario)}</b><div class="muted small">${esc(rolName(a.rol))}</div></td><td><span class="tag ${lb[0]}">${lb[1]}</span></td><td>${esc(a.texto)}${a.motivo ? `<div class="small" style="color:var(--bad)">Motivo: ${esc(a.motivo)}</div>` : ''}</td></tr>`; }).join('')}
+    </tbody></table>` : '<div class="empty">No hay actividad registrada con ese filtro</div>'}</div>
+  </div>`;
+}
+CH.aUser = el => { S.aUser = el.value; render(); };
+CH.aTipo = el => { S.aTipo = el.value; render(); };
+A.aRefresh = () => { S.aData = null; render(); };
+A.aSoloAnul = () => { S.aTipo = 'anulacion'; render(); };
 
 /* ===================== inicio ===================== */
 if (location.hash === '#nexora') bootAdmin(); else boot();
