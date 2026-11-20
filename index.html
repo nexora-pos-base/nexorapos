@@ -437,6 +437,7 @@ function toast(msg, type = '') {
   setTimeout(() => t.remove(), 2600);
 }
 
+const claveUsuario = n => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 async function hashPin(pin, salt) {
   const txt = salt + ':' + pin;
   try {
@@ -473,7 +474,7 @@ const DEFAULT_PERMS = {
 
 /* ---------------- capa de datos (Firestore o demo local) ---------------- */
 const DB = (() => {
-  let mode = null, nid = null, F = null, A = null, fdb = null, auth = null;
+  let mode = null, nid = null, F = null, A = null, fdb = null, auth = null, authUser = null, simUid = null;
   const LKEY = 'nexorapos_demo_v1';
   let store = {};
   const listeners = new Set();
@@ -499,6 +500,13 @@ const DB = (() => {
   return {
     get mode() { return mode; },
     get nid() { return nid; },
+    /* quién está conectado en este equipo: la cuenta del negocio (dueño) o un equipo anónimo abierto con el link */
+    get authUid() { return mode === 'local' ? (simUid || 'demo') : (authUser ? authUser.uid : null); },
+    get isAnon() { return mode === 'local' ? !!simUid : !!(authUser && authUser.isAnonymous); },
+    get isOwner() { return mode === 'local' ? !simUid : !!(authUser && !authUser.isAnonymous && authUser.uid === nid); },
+    setAuth(u) { authUser = u; },
+    simKiosk(id) { simUid = id; },
+    signInAnon() { return A.signInAnonymously(auth); },
     async init() {
       if (!FIREBASE_CONFIG) { mode = 'local'; loadLocal(); nid = 'demo'; return; }
       mode = 'firebase';
@@ -523,12 +531,12 @@ const DB = (() => {
       if (filters && filters.length) q = F.query(q, ...filters.map(([f, op, v]) => F.where(f, op, v)));
       return F.onSnapshot(q, s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), err => { console.error(col, err); toast('Error de conexión (' + col + '): ' + err.code, 'err'); });
     },
-    subDoc(col, id, cb) {
+    subDoc(col, id, cb, onErr) {
       if (mode === 'local') {
         const l = { col, fire: () => { const d = (store[col] || {})[id]; cb(d ? { id, ...d } : null); } };
         listeners.add(l); l.fire(); return () => listeners.delete(l);
       }
-      return F.onSnapshot(ref(col, id), s => cb(s.exists() ? { id: s.id, ...s.data() } : null), err => console.error(col, err));
+      return F.onSnapshot(ref(col, id), s => cb(s.exists() ? { id: s.id, ...s.data() } : null), err => { console.error(col, err); if (onErr) onErr(err); });
     },
     async query(col, filters) {
       if (mode === 'local') return localList(col, filters);
@@ -549,6 +557,19 @@ const DB = (() => {
       F.setDoc(ref(col, id), data, { merge }).catch(fail(col));
     },
     add(col, data) { const id = this.newId(col); this.set(col, id, data, false); return id; },
+    /* versiones que esperan la respuesta del servidor (para validar contraseñas con las reglas) */
+    setAsync(col, id, data, merge = true) {
+      if (mode === 'local') { this.set(col, id, data, merge); return Promise.resolve(); }
+      return F.setDoc(ref(col, id), data, { merge });
+    },
+    delAsync(col, id) {
+      if (mode === 'local') { this.del(col, id); return Promise.resolve(); }
+      return F.deleteDoc(ref(col, id));
+    },
+    unsetAsync(col, id, field) {
+      if (mode === 'local') { const d = (store[col] || {})[id]; if (d) { delete d[field]; saveLocal(); notify(col); } return Promise.resolve(); }
+      return F.updateDoc(ref(col, id), { [field]: F.deleteField() });
+    },
     update(col, id, patch) {
       if (mode === 'local') {
         if (!(store[col] || {})[id]) return;
@@ -642,6 +663,13 @@ const DB = (() => {
       }
       return F.setDoc(F.doc(fdb, path), data, { merge }).catch(e => { fail(path)(e); });
     },
+    rdelField(path, field) {
+      if (mode === 'local') {
+        const p = path.split('/'); const id = p.pop(); const key = 'R:' + p.join('/');
+        if ((store[key] || {})[id]) { delete store[key][id][field]; saveLocal(); notify(key); } return Promise.resolve();
+      }
+      return F.updateDoc(F.doc(fdb, path), { [field]: F.deleteField() }).catch(e => console.warn(path, e));
+    },
     rnewId(col) { return mode === 'local' ? uid() : F.doc(F.collection(fdb, col)).id; },
     /* borra todos los datos del negocio (para reiniciar un demo) */
     async wipe(cols) {
@@ -706,7 +734,12 @@ async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
     usuarios.u_mes2 = { nombre: 'Andrea', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 4 };
     if (cfg.modCocina) usuarios.u_coc = { nombre: cfg.nombreCocina, rol: 'cocina', pin: await hashPin('3333', salt), activo: true, orden: 5 };
   }
-  return { data: { config: { general: cfg }, salas, mesas, categorias, productos, usuarios }, root: { nombre, creado: now(), tipo } };
+  /* las contraseñas van aparte (colección "pines"), que nadie puede leer desde los equipos */
+  const pines = {};
+  for (const [id, u] of Object.entries(usuarios)) { pines[id] = { pin: u.pin }; delete u.pin; }
+  const acceso = { nombre, usuarios: {} };
+  for (const [id, u] of Object.entries(usuarios)) acceso.usuarios[claveUsuario(u.nombre)] = { id, nombre: u.nombre, rol: u.rol };
+  return { data: { config: { general: cfg }, salas, mesas, categorias, productos, usuarios, pines, publico: { acceso } }, root: { nombre, creado: now(), tipo } };
 }
 const DEMO_TIPO = () => new URLSearchParams(location.search).get('demo') === 'restaurante' ? 'restaurante' : 'bar';
 
@@ -733,6 +766,7 @@ const S = {
   drafts: {}, salaId: null, ventaId: null, catId: 'all', q: '', editPlano: false, showAcct: false,
   ventasDia: dayInput(Date.now()), ventasDiaData: null, ajTab: 'negocio', prodCat: 'all', prodQ: '',
   sound: true, dayStart: startOfDay(), arqueosHist: null, showEntregados: false,
+  kiosk: false, acceso: undefined, usrLoaded: false,
 };
 let SUBS = [], CAJA_SUBS = [], CAJA_ID = null;
 const VMAP = { A: {}, B: {} };
@@ -762,9 +796,45 @@ const resumenItems = items => (items || []).map(i => `${i.cant} ${i.nombre}${i.n
    su clave la define NEXORA desde el panel y queda en la licencia (solo NEXORA la puede cambiar) */
 const MANT_ID = '_mant';
 const mantUser = () => ({ id: MANT_ID, nombre: 'Mantenimiento', rol: 'admin', activo: true, mant: true, color: '#0f172a' });
-async function mantHashActual() {
-  if (S.lic && S.lic.mantHash) return S.lic.mantHash;
-  return DB.mode === 'local' ? await hashPin('0000', DB.nid) : null;
+async function mantHashActual() { // solo en la demo local; con Firebase la valida el servidor
+  const d = await DB.rget('licencias/' + DB.nid + '/privado/mant');
+  return d && d.h ? d.h : await hashPin('0000', DB.nid);
+}
+/* en la demo de "solo link" cada pestaña simula un celular distinto */
+const SESS_KEY = () => 'nexorapos_session' + (DB.mode === 'local' && DB.isAnon ? ':' + DB.authUid : '');
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]);
+/* abre la sesión de una persona en este equipo. Con Firebase, las reglas del servidor
+   comparan la contraseña con la guardada (que ningún equipo puede leer). */
+async function crearSesion(entry, h) {
+  const d = { userId: entry.id, pin: h, rol: entry.rol, nombre: entry.nombre, creada: now() };
+  if (DB.mode === 'local') {
+    let ok = false;
+    if (entry.id === MANT_ID) ok = h === (await mantHashActual());
+    else {
+      const pd = await DB.get('pines', entry.id), u = await DB.get('usuarios', entry.id);
+      ok = !!u && u.activo && u.rol === entry.rol && ((pd && pd.pin === h) || (!pd && u.pin === h));
+    }
+    if (ok) DB.set('sesiones', DB.authUid, d, false);
+    return ok;
+  }
+  try { await withTimeout(DB.setAsync('sesiones', DB.authUid, d, false), 15000); return true; }
+  catch (e) { if (e && e.code === 'permission-denied') return false; throw e; }
+}
+/* link del cliente: …/?n=nombrecorto  (el equipo lo recuerda) */
+const LINK_NEG = (() => {
+  let q = ''; try { q = (new URLSearchParams(location.search).get('n') || '').trim(); } catch (e) { }
+  try { if (q) localStorage.setItem('nexorapos_link', q); else q = localStorage.getItem('nexorapos_link') || ''; } catch (e) { }
+  return q;
+})();
+async function resolverLink() {
+  if (!LINK_NEG) return null;
+  const k = 'nexorapos_linknid:' + LINK_NEG.toLowerCase();
+  let nid = null;
+  try { const a = await withTimeout(DB.rget('alias/' + LINK_NEG.toLowerCase()), 10000); if (a && a.nid) nid = a.nid; } catch (e) { console.warn('alias', e); }
+  if (!nid) { try { nid = localStorage.getItem(k); } catch (e) { } }
+  if (!nid && LINK_NEG.length >= 20) nid = LINK_NEG;
+  if (nid) try { localStorage.setItem(k, nid); } catch (e) { }
+  return nid;
 }
 function logAct(tipo, texto, extra = {}) {
   if (!S.user) return;
@@ -811,8 +881,25 @@ async function boot() {
   try { await DB.init(); }
   catch (e) { console.error(e); S.screen = 'fatal'; S.fatal = 'No se pudo cargar Firebase. Revisa la conexión a internet y la configuración.'; render(); return; }
   if (DB.mode === 'local') ensureLicDemo();
-  DB.onAuth(user => {
+  // demo local del modo "solo link" (para pruebas): ?kiosk=1
+  if (DB.mode === 'local' && new URLSearchParams(location.search).get('kiosk')) { let sid = sessionStorage.getItem('nexorapos_sim'); if (!sid) { sid = 'equipo-' + uid(); sessionStorage.setItem('nexorapos_sim', sid); } DB.simKiosk(sid); kioskBoot(); return; }
+  const linkNid = DB.mode === 'firebase' && LINK_NEG ? await resolverLink() : null;
+  if (DB.mode === 'firebase' && LINK_NEG && !linkNid) { S.screen = 'fatal'; S.fatal = 'Este link no es válido. Pídele a NEXORA el link correcto del negocio.'; render(); return; }
+  DB.onAuth(async user => {
     stopSubs(); if (LICUNSUB) { LICUNSUB(); LICUNSUB = null; }
+    if (ACCUNSUB) { ACCUNSUB(); ACCUNSUB = null; }
+    DB.setAuth(user || null);
+    if (linkNid) {
+      // equipo abierto con el link: entra sin correo (cuenta anónima del equipo)
+      if (!user) {
+        S.screen = 'loading'; render();
+        try { await DB.signInAnon(); }
+        catch (e) { console.error(e); S.screen = 'fatal'; S.fatal = 'No se pudo conectar (' + (e.code || e.message) + '). Si dice "operation-not-allowed", activa el acceso Anónimo en Firebase → Authentication → Método de acceso.'; render(); }
+        return;
+      }
+      if (!user.isAnonymous && user.uid !== linkNid) { S.screen = 'fatal'; S.fatal = 'Este navegador tiene abierta otra cuenta (por ejemplo el panel de NEXORA). Abre el link del negocio en otro navegador o en una ventana de incógnito.'; render(); return; }
+      if (user.isAnonymous) { DB.setNegocio(linkNid); kioskBoot(); return; }
+    } else if (user && user.isAnonymous) { await DB.logout(); return; }
     if (!user) { S.user = null; S.screen = 'login'; render(); return; }
     DB.setNegocio(user.uid);
     S.authEmail = user.email || '';
@@ -918,10 +1005,10 @@ function startSubs() {
     S.usuarios = list.sort(byOrden);
     if (S.user && !S.user.mant) {
       const u = list.find(x => x.id === S.user.id);
-      if (!u || !u.activo) { S.user = null; localStorage.removeItem('nexorapos_session'); S.screen = 'pin'; PINST = { userId: null, digits: '' }; }
+      if (!u || !u.activo) { salirUsuario(); return; }
       else S.user = u;
     }
-    mark('usuarios'); render();
+    S.usrLoaded = true; mark('usuarios'); render();
   }));
   SUBS.push(DB.sub('salas', null, l => { S.salas = l.sort(byOrden); render(); }));
   SUBS.push(DB.sub('mesas', null, l => { S.mesas = l.sort(byOrden); render(); }));
@@ -957,10 +1044,11 @@ function onComandas(l) {
 }
 
 async function enterAfterLoad() {
-  if (S.user) { S.screen = 'app'; render(); return; }
-  let sess = null; try { sess = JSON.parse(localStorage.getItem('nexorapos_session')); } catch (e) { }
-  let u = !licState().bloqueado && sess && sess.nid === DB.nid && S.usuarios.find(x => x.id === sess.userId && x.activo);
-  if (!u && !licState().bloqueado && sess && sess.nid === DB.nid && sess.userId === MANT_ID && sess.h && sess.h === (await mantHashActual())) u = mantUser();
+  if (S.user) { S.screen = 'app'; if (!canView(S.view)) S.view = defaultView(); render(); return; }
+  let sess = null; try { sess = JSON.parse(localStorage.getItem(SESS_KEY())); } catch (e) { }
+  // equipo principal (cuenta del negocio): retoma a la última persona que entró en este equipo
+  let u = null;
+  if (!licState().bloqueado && sess && sess.nid === DB.nid) u = sess.userId === MANT_ID ? mantUser() : S.usuarios.find(x => x.id === sess.userId && x.activo);
   if (u) { S.user = u; S.screen = 'app'; if (!canView(S.view)) S.view = defaultView(); }
   else { S.screen = 'pin'; PINST = { userId: null, digits: '' }; }
   render();
@@ -982,6 +1070,30 @@ function beep() {
 /* ===================== render ===================== */
 let rq = false;
 function render() { if (rq) return; rq = true; requestAnimationFrame(doRender); }
+ /* lista pública para la pantalla de entrada (solo nombres y roles, nunca contraseñas) */
+let ACC_LAST = null;
+const puedeAdministrar = () => DB.isOwner || (!!S.user && S.user.rol === 'admin');
+function syncAcceso() {
+  if (!puedeAdministrar() || !S.usrLoaded || !S.cfg || !S.cfg.permisos || S.screen === 'setup') return;
+  const usuarios = {};
+  S.usuarios.filter(u => u.activo).forEach(u => { usuarios[claveUsuario(u.nombre)] = { id: u.id, nombre: u.nombre, rol: u.rol }; });
+  const d = { nombre: S.cfg.nombre || '', usuarios };
+  const j = JSON.stringify(d); if (j === ACC_LAST) return;
+  ACC_LAST = j;
+  if (S.acceso && JSON.stringify({ nombre: S.acceso.nombre || '', usuarios: S.acceso.usuarios || {} }) === j) return;
+  DB.set('publico', 'acceso', d, false);
+}
+/* pasa las contraseñas que estaban dentro de cada usuario a la colección protegida "pines" */
+let MIG_PIN = false;
+async function migrarPines() {
+  if (MIG_PIN || !puedeAdministrar() || !S.usrLoaded) return;
+  const pend = S.usuarios.filter(u => u.pin);
+  MIG_PIN = true; if (!pend.length) return;
+  for (const u of pend) {
+    try { await DB.setAsync('pines', u.id, { pin: u.pin }, false); await DB.unsetAsync('usuarios', u.id, 'pin'); }
+    catch (e) { console.warn('migración de contraseñas', e); MIG_PIN = false; return; }
+  }
+}
 /* una sola vez por negocio: llena "unidades por caja" de los productos del bar que aún no lo tengan */
 let MIG_PC = false;
 function migrarPorCaja() {
@@ -993,7 +1105,7 @@ function migrarPorCaja() {
 }
 function doRender() {
   rq = false;
-  try { migrarPorCaja(); } catch (e) { console.warn(e); }
+  try { migrarPorCaja(); syncAcceso(); migrarPines(); } catch (e) { console.warn(e); }
   if (S.dragging) { setTimeout(render, 150); return; }
   const root = $('#root');
   const act = document.activeElement;
@@ -1063,17 +1175,27 @@ function pinHTML() {
     <div class="field"><label>Contraseña</label><input class="inp" id="pl_p" data-keep data-enter="pinLogin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="4 números"></div>
     <button class="btn pri block lg" data-act="pinLogin" ${lk ? 'disabled' : ''}>Entrar</button>
     <p class="small" style="color:var(--bad);margin-top:10px;min-height:18px">${lk ? `Demasiados intentos fallidos. Espera ${lk} segundos.` : esc(S.pinErr || '')}</p>
-    ${demo}${DB.mode === 'firebase' ? '<button class="btn ghost sm" style="margin-top:8px" data-act="logoutNegocio">Desconectar este equipo del negocio</button>' : ''}
+    ${S.kiosk && S.acceso === null ? `<p class="small" style="color:var(--bad);margin-top:6px">${S.accesoErr ? 'No se pudo leer el negocio (' + esc(S.accesoErr) + '). Revisa el internet o las reglas de Firebase.' : 'Este negocio todavía no está listo para entrar con el link. Abre la app una vez en el equipo principal del negocio.'}</p>` : ''}
+    ${demo}${DB.mode === 'firebase' && !S.kiosk ? '<button class="btn ghost sm" style="margin-top:8px" data-act="logoutNegocioAsk">Desconectar este equipo del negocio</button>' : ''}
   </div></div>`;
 }
 A.pinLogin = async () => {
   if (lockLeft()) { render(); setTimeout(render, lockLeft() * 1000 + 50); return; }
   const name = $('#pl_u').value.replace(/\s+/g, ' ').trim(), pin = $('#pl_p').value.trim();
   if (!name || !/^\d{4}$/.test(pin)) { S.pinErr = 'Escribe tu usuario y tu contraseña de 4 números'; render(); return; }
-  const h = await hashPin(pin, DB.nid);
-  let u = S.usuarios.find(x => x.activo && norm(x.nombre).replace(/\s+/g, ' ').trim() === norm(name)), ok = !!u && h === u.pin;
-  if (!u && norm(name) === 'mantenimiento') { const mh = await mantHashActual(); if (mh && h === mh) { u = mantUser(); ok = true; } }
+  const h = await hashPin(pin, DB.nid), key = claveUsuario(name);
+  let entry = null;
+  if (S.kiosk) entry = ((S.acceso || {}).usuarios || {})[key] || null;
+  else { const x = S.usuarios.find(x => x.activo && claveUsuario(x.nombre) === key); if (x) entry = { id: x.id, nombre: x.nombre, rol: x.rol }; }
+  if (!entry && key === 'mantenimiento') entry = { id: MANT_ID, nombre: 'Mantenimiento', rol: 'admin' };
   $('#pl_p').value = '';
+  let ok = false;
+  if (entry) {
+    S.pinErr = 'Verificando…'; render();
+    try { ok = await crearSesion(entry, h); }
+    catch (e) { console.error(e); S.pinErr = e && e.code === 'timeout' ? 'Sin conexión a internet. Revisa el wifi e intenta de nuevo.' : 'No se pudo entrar (' + ((e && (e.code || e.message)) || 'error') + ')'; render(); return; }
+  }
+  const u = !ok ? null : entry.id === MANT_ID ? mantUser() : (S.usuarios.find(x => x.id === entry.id) || { ...entry, activo: true });
   if (!ok) {
     S.pinFails = (S.pinFails || 0) + 1;
     if (S.pinFails >= 5) { localStorage.setItem('nexorapos_lock', String(Date.now() + 60000)); S.pinFails = 0; setTimeout(render, 60050); }
@@ -1081,11 +1203,56 @@ A.pinLogin = async () => {
   }
   S.pinFails = 0; S.pinErr = '';
   if (!u.mant) localStorage.setItem('nexorapos_lastuser', u.nombre);
-  S.user = u; S.screen = 'app'; S.view = defaultView(); S.editPlano = false;
-  localStorage.setItem('nexorapos_session', JSON.stringify({ nid: DB.nid, userId: u.id, ...(u.mant ? { h } : {}) }));
+  localStorage.setItem(SESS_KEY(), JSON.stringify({ nid: DB.nid, userId: u.id }));
+  S.user = u; S.editPlano = false;
+  if (S.kiosk) { kioskEntrar(); logAct('sesion', 'Inició sesión'); return; }
+  S.screen = 'app'; S.view = defaultView();
   logAct('sesion', 'Inició sesión');
   render();
 };
+
+/* ===================== equipos abiertos con el link (sin correo) ===================== */
+let ACCUNSUB = null;
+async function kioskBoot() {
+  S.kiosk = true; S.user = null; S.screen = 'loading'; render();
+  if (ACCUNSUB) ACCUNSUB();
+  S.accesoErr = '';
+  ACCUNSUB = DB.subDoc('publico', 'acceso', d => {
+    S.acceso = d || null; S.accesoErr = '';
+    if (d && !S.user) S.cfg = { ...(S.cfg || {}), nombre: d.nombre || '' };
+    render();
+  }, err => { S.acceso = null; S.accesoErr = err.code || 'error'; render(); });
+  let sess = null; try { sess = JSON.parse(localStorage.getItem(SESS_KEY())); } catch (e) { }
+  if (sess && sess.nid === DB.nid) {
+    let sd = null; try { sd = await withTimeout(DB.get('sesiones', DB.authUid), 8000); } catch (e) { }
+    if (sd && sd.userId === sess.userId) { S.user = sd.userId === MANT_ID ? mantUser() : { id: sd.userId, nombre: sd.nombre, rol: sd.rol, activo: true }; kioskEntrar(); return; }
+  }
+  localStorage.removeItem(SESS_KEY());
+  S.screen = 'pin'; render();
+}
+function kioskEntrar() {
+  if (LICUNSUB) LICUNSUB();
+  S.lic = undefined;
+  LICUNSUB = DB.rsubDoc('licencias/' + DB.nid, l => {
+    S.lic = l;
+    const b = licState().bloqueado;
+    if (b && S.screen !== 'bloqueo') { stopSubs(); S.screen = 'bloqueo'; }
+    else if (!b && S.screen === 'bloqueo' && S.user) { S.screen = 'loading'; startSubs(); }
+    render();
+  });
+  S.screen = 'loading';
+  startSubs();
+}
+/* cierra la sesión de la persona (no desconecta el equipo) */
+function salirUsuario() {
+  S.user = null; S.pinErr = ''; S.usrLoaded = false;
+  localStorage.removeItem(SESS_KEY());
+  closeModal();
+  if (S.kiosk) { stopSubs(); if (LICUNSUB) { LICUNSUB(); LICUNSUB = null; } }
+  if (DB.authUid) DB.delAsync('sesiones', DB.authUid).catch(e => console.warn('sesión', e));
+  S.screen = 'pin'; PINST = { userId: null, digits: '' };
+  render();
+}
 
 const NAV = [['vender', 'Vender'], ['salon', 'Salón'], ['pedidos', 'Pedidos'], ['cocina', 'Cocina'], ['caja', 'Caja'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['productos', 'Productos'], ['ajustes', 'Ajustes']];
 /* módulos que se pueden apagar por negocio (solo Mantenimiento los ve en Ajustes) */
@@ -1158,7 +1325,32 @@ A.login = async () => {
   try { await DB.login(e, p); S.loginErr = ''; }
   catch (err) { S.loginErr = 'Correo o contraseña incorrectos'; console.error(err); render(); }
 };
-A.logoutNegocio = async () => { localStorage.removeItem('nexorapos_session'); S.user = null; await DB.logout(); };
+/* desconectar el equipo desde la pantalla de entrada: solo con la contraseña del Administrador o de Mantenimiento */
+A.logoutNegocioAsk = () => {
+  MODAL = { type: 'desconectar' };
+  openModal(`${mHead('Desconectar este equipo')}<div class="mb">
+    <p class="small" style="margin-bottom:12px">Si desconectas este equipo, para volver a usarlo hay que escribir el correo y la clave del negocio. Solo el administrador puede hacerlo.</p>
+    <div class="field"><label>Contraseña del Administrador</label><input class="inp" id="ln_p" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 números" data-enter="logoutNegocioOk" autofocus></div>
+    <p class="small" id="ln_err" style="color:var(--bad);min-height:18px"></p>
+  </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn bad" data-act="logoutNegocioOk">Desconectar</button></div>`);
+};
+A.logoutNegocioOk = async () => {
+  if (lockLeft()) { $('#ln_err').textContent = `Demasiados intentos. Espera ${lockLeft()} segundos.`; return; }
+  const p = $('#ln_p').value.trim();
+  const h = /^\d{4}$/.test(p) ? await hashPin(p, DB.nid) : null;
+  let ok = false;
+  if (h) {
+    const cand = [...S.usuarios.filter(u => u.activo && u.rol === 'admin').map(u => ({ id: u.id, nombre: u.nombre, rol: 'admin' })), { id: MANT_ID, nombre: 'Mantenimiento', rol: 'admin' }];
+    for (const c of cand) { try { if (await crearSesion(c, h)) { ok = true; break; } } catch (e) { $('#ln_err').textContent = 'Sin conexión. Intenta de nuevo.'; return; } }
+  }
+  if (!ok) {
+    S.pinFails = (S.pinFails || 0) + 1;
+    if (S.pinFails >= 5) { localStorage.setItem('nexorapos_lock', String(Date.now() + 60000)); S.pinFails = 0; }
+    $('#ln_p').value = ''; $('#ln_err').textContent = 'Contraseña incorrecta. Pídele al administrador que lo haga.'; return;
+  }
+  S.pinFails = 0; closeModal(); toast('Equipo desconectado'); A.logoutNegocio();
+};
+A.logoutNegocio = async () => { localStorage.removeItem(SESS_KEY()); S.user = null; await DB.logout(); };
 A.crearNegocio = async () => {
   const n = $('#st_nombre').value.trim(), p = $('#st_pin').value.trim(), p2 = $('#st_pin2').value.trim();
   if (!n) { S.setupErr = 'Escribe el nombre del negocio'; render(); return; }
@@ -1168,7 +1360,7 @@ A.crearNegocio = async () => {
   try { const sd = await buildSeed(n, p, $('#st_us').checked, $('#st_tipo').value); await DB.seed(sd.data, sd.root); S.setupErr = ''; startSubs(); }
   catch (err) { console.error(err); S.setupErr = 'No se pudo crear: ' + (err.code || err.message); render(); }
 };
-A.logoutUser = () => { logAct('sesion', 'Cerró sesión'); S.user = null; S.pinErr = ''; localStorage.removeItem('nexorapos_session'); S.screen = 'pin'; PINST = { userId: null, digits: '' }; closeModal(); render(); };
+A.logoutUser = () => { logAct('sesion', 'Cerró sesión'); salirUsuario(); };
 A.nav = el => { S.view = el.dataset.v; S.editPlano = false; if (S.view === 'caja') S.arqueosHist = null; if (S.view === 'ventas') { S.ventasDiaData = null; S.mData = null; S.aData = null; } if (S.view === 'inventario') S.invmovs = null; render(); $('main') && ($('main').scrollTop = 0); };
 
 /* ===================== salón ===================== */
@@ -2133,8 +2325,9 @@ function vAjustes() {
     ${DB.mode === 'firebase' ? `<div class="list-row"><span>Cuenta del negocio</span><b>${esc(S.authEmail || '')}</b></div>` : ''}
     <div class="list-row"><span>Versión</span><b>Piloto fase 1</b></div>
     <p class="muted small" style="margin:12px 0">Para usarlo en el celular de los meseros: abre el link en Chrome y elige "Agregar a la pantalla principal".</p>
-    <div class="row wrap">${DB.mode === 'local' ? '<button class="btn bad" data-act="resetDemo">Borrar datos de demostración</button>' : '<button class="btn" data-act="logoutNegocioConf">Cerrar la cuenta del negocio en este equipo</button>'}
-    ${S.user.rol === 'admin' ? '<button class="btn bad" data-act="reiniciarNeg">Reiniciar el negocio (borrar todo)</button>' : ''}</div></div>`;
+    <div class="row wrap">${DB.mode === 'local' && !S.kiosk ? '<button class="btn bad" data-act="resetDemo">Borrar datos de demostración</button>' : S.kiosk ? '' : '<button class="btn" data-act="logoutNegocioConf">Cerrar la cuenta del negocio en este equipo</button>'}
+    ${S.user.rol === 'admin' && !S.kiosk ? '<button class="btn bad" data-act="reiniciarNeg">Reiniciar el negocio (borrar todo)</button>' : ''}</div>
+    ${S.kiosk ? '<p class="muted small" style="margin-top:8px">Este equipo entra con el link del negocio. Para reiniciar el negocio hay que hacerlo desde el equipo principal.</p>' : ''}</div>`;
   return topHTML('Ajustes') + `<div class="wrap"><div class="tabs" style="margin-bottom:16px">${AJT.map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="ajTab" data-t="${k}">${l}</button>`).join('')}</div>${body}</div>`;
 }
 function licCardHTML() {
@@ -2253,8 +2446,9 @@ A.saveUser = async () => {
   const otrosAdmin = S.usuarios.filter(u => u.id !== MODAL.id && u.rol === 'admin' && u.activo).length;
   if (MODAL.id && (r !== 'admin' || !a) && !otrosAdmin && (S.usuarios.find(u => u.id === MODAL.id) || {}).rol === 'admin') return toast('Debe quedar al menos un administrador activo', 'err');
   const d = { nombre: n, rol: r, activo: a };
-  if (p) d.pin = await hashPin(p, DB.nid);
-  if (MODAL.id) DB.update('usuarios', MODAL.id, d); else DB.add('usuarios', { ...d, orden: S.usuarios.length + 1 });
+  let id = MODAL.id;
+  if (id) DB.update('usuarios', id, d); else id = DB.add('usuarios', { ...d, orden: S.usuarios.length + 1 });
+  if (p) DB.set('pines', id, { pin: await hashPin(p, DB.nid) }, false);
   logAct('ajustes', `${MODAL.id ? 'Editó' : 'Creó'} el usuario ${n} (${rolName(r)})${p ? ' · contraseña ' + (MODAL.id ? 'cambiada' : 'asignada') : ''}${!a ? ' · inactivo' : ''}`);
   closeModal(); toast('Usuario guardado', 'ok');
 };
@@ -2271,8 +2465,8 @@ A.confReiniciar = async () => {
   const b = $('#modal .btn.bad'); if (b) { b.disabled = true; b.textContent = 'Borrando…'; }
   try {
     stopSubs();
-    await DB.wipe(['config', 'usuarios', 'salas', 'mesas', 'categorias', 'productos', 'ventas', 'comandas', 'arqueos', 'movimientos', 'clientes', 'invmov']);
-    localStorage.removeItem('nexorapos_session'); localStorage.removeItem('nexorapos_drafts_' + DB.nid); localStorage.removeItem('nexorapos_cart_' + DB.nid);
+    await DB.wipe(['config', 'usuarios', 'salas', 'mesas', 'categorias', 'productos', 'ventas', 'comandas', 'arqueos', 'movimientos', 'clientes', 'invmov', 'actividad', 'pines', 'publico', 'sesiones']);
+    localStorage.removeItem(SESS_KEY()); localStorage.removeItem('nexorapos_drafts_' + DB.nid); localStorage.removeItem('nexorapos_cart_' + DB.nid);
     location.reload();
   } catch (e) { console.error(e); toast('No se pudo borrar todo: ' + (e.code || e.message), 'err'); if (b) { b.disabled = false; b.textContent = 'Borrar todo'; } }
 };
@@ -2431,15 +2625,36 @@ async function bootAdmin() {
   if (DB.mode === 'local') ensureLicDemo();
   DB.onAuth(user => {
     ADSUBS.forEach(u => u && u()); ADSUBS = [];
-    if (!user) { S.screen = 'adLogin'; render(); return; }
+    if (!user || user.isAnonymous) { S.screen = 'adLogin'; render(); return; }
     S.authEmail = user.email || ''; S.authUid = user.uid;
     S.screen = 'admin'; S.ad.lics = null; S.ad.err = null; render();
-    ADSUBS.push(DB.rsub('licencias', l => { S.ad.lics = l; S.ad.err = null; render(); }, err => { S.ad.err = err.code || 'error'; render(); }));
+    ADSUBS.push(DB.rsub('licencias', l => { S.ad.lics = l; S.ad.err = null; migrarMantPanel(l); render(); }, err => { S.ad.err = err.code || 'error'; render(); }));
     ADSUBS.push(DB.rsubDoc('nexora/ajustes', d => { S.ad.aj = d && !d.error ? d : {}; render(); }));
   });
 }
 
 const adLic = id => (S.ad.lics || []).find(x => x.id === id);
+/* la clave de mantenimiento ya no va dentro de la licencia (la podía leer el negocio): pasa a licencias/{id}/privado/mant */
+const MIG_MANT = new Set();
+function migrarMantPanel(lics) {
+  (lics || []).forEach(l => {
+    if (!l.mantHash || MIG_MANT.has(l.id)) return;
+    MIG_MANT.add(l.id);
+    DB.rset('licencias/' + l.id + '/privado/mant', { h: l.mantHash }, false).then(() => { DB.rset('licencias/' + l.id, { tieneMant: true }); DB.rdelField('licencias/' + l.id, 'mantHash'); });
+  });
+}
+const setMant = async (id, pin) => { await DB.rset('licencias/' + id + '/privado/mant', { h: await hashPin(pin, id) }, false); DB.rset('licencias/' + id, { tieneMant: true }); };
+/* link del cliente: los equipos entran sin correo, solo con usuario y contraseña */
+const linkCliente = l => location.origin + location.pathname + '?n=' + encodeURIComponent(l.alias || l.id);
+const slugify = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30);
+IN.adAliasV = el => { const v = $('#af_alias_v'); if (v) v.textContent = slugify(el.value) || 'nombre'; };
+A.adCopiarLink = el => {
+  const l = adLic(el.dataset.id); if (!l) return;
+  const url = linkCliente(l);
+  const ok = () => toast('Link copiado: ' + url, 'ok');
+  try { navigator.clipboard.writeText(url).then(ok, () => window.prompt('Copia el link del cliente:', url)); }
+  catch (e) { window.prompt('Copia el link del cliente:', url); }
+};
 const ORDEN_EST = { bloqueada: 0, vencida: 1, aviso: 2, suspendida: 3, aldia: 4, pendiente: 5 };
 function relTxt(s) {
   if (s.k === 'aldia' || s.k === 'aviso') return s.dias <= 0 ? 'vence hoy' : `vence en ${s.dias} ${s.dias === 1 ? 'día' : 'días'}`;
@@ -2488,7 +2703,7 @@ function adminHTML() {
       <td class="num"><b>${money(l.valor)}</b></td>
       <td>${fecha(l.pagadoHasta)}<div class="muted small">${relTxt(s)}</div></td>
       <td><span class="tag ${lb[0]}">${lb[1]}</span></td>
-      <td><div class="row" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn sm ok" data-act="adPago" data-id="${l.id}">Registrar pago</button><a class="btn sm" data-act="noop" href="${waCobro(l)}" target="_blank" rel="noopener">Cobrar por WhatsApp</a><button class="btn sm" data-act="adEditar" data-id="${l.id}">Editar</button></div></td>
+      <td><div class="row" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn sm ok" data-act="adPago" data-id="${l.id}">Registrar pago</button><a class="btn sm" data-act="noop" href="${waCobro(l)}" target="_blank" rel="noopener">Cobrar por WhatsApp</a><button class="btn sm" data-act="adCopiarLink" data-id="${l.id}">Copiar link</button><button class="btn sm" data-act="adEditar" data-id="${l.id}">Editar</button></div></td>
     </tr>`; }).join('')}</tbody></table>` : '<div class="empty">Todavía no tienes clientes. Crea el primero con "+ Nuevo cliente".</div>'}</div>
     <p class="muted small" style="margin-top:12px">Cómo funciona: 5 días antes del vencimiento el administrador del restaurante ve un aviso. Si se vence, tiene los días de gracia con un aviso rojo; después el sistema se bloquea hasta que registres el pago aquí. Al registrarlo se desbloquea solo, sin recargar.</p>
   </div></div>`;
@@ -2558,6 +2773,7 @@ A.adDetalle = async el => {
     <div class="list-row"><span>Pagado hasta</span><b>${fecha(l.pagadoHasta)}</b></div>
     <div class="list-row"><span>Días de gracia</span><b>${l.diasGracia ?? 3}</b></div>
     <div class="list-row"><span>Código del negocio</span><b class="small">${esc(l.id)}</b></div>
+    <div class="list-row"><span>Link del cliente${l.alias ? '' : ' <span class="muted small">(ponle un nombre en Editar)</span>'}</span><span class="row"><b class="small" style="word-break:break-all">${esc(linkCliente(l))}</b><button class="btn sm" data-act="adCopiarLink" data-id="${l.id}">Copiar</button></span></div>
     ${l.notas ? `<p class="small muted" style="margin-top:8px">${esc(l.notas)}</p>` : ''}
     <h4 style="margin:16px 0 4px;font-size:14px">Pagos</h4>
     ${pagos === null ? '<p class="muted small">Cargando…</p>' : pagos.length ? pagos.map((p, i) => `<div class="list-row"><span>${fecha(p.fecha)} <span class="muted small">· ${esc(p.medio || '')} · ${p.meses} ${p.meses === 1 ? 'mes' : 'meses'} · hasta ${fecha(p.hasta)}</span></span><span class="row"><b>${money(p.monto)}</b><button class="btn sm" data-act="adRecibo" data-i="${i}">Recibo</button></span></div>`).join('') : '<p class="muted small">Sin pagos registrados.</p>'}
@@ -2577,6 +2793,8 @@ function adForm(l) {
   MODAL = { type: 'adForm', id: l ? l.id : null };
   openModal(`${mHead(nuevo ? 'Nuevo cliente' : 'Editar ' + esc(l.negocio))}<div class="mb">
     <div class="field"><label>Código del negocio</label><input class="inp" id="af_id" value="${esc(l ? l.id : '')}" ${nuevo ? 'autofocus placeholder="Lo ve el cliente en la pantalla de activación"' : 'readonly'}></div>
+    <div class="field"><label>Nombre del link (sin espacios)</label><input class="inp" id="af_alias" data-in="adAliasV" value="${esc(d.alias || '')}" placeholder="Ej: acboutique" autocapitalize="off" spellcheck="false">
+      <div class="muted small" style="margin-top:4px">Queda así: <b>${esc(location.origin + location.pathname)}?n=</b><b id="af_alias_v">${esc(d.alias || 'nombre')}</b> · Con ese link los meseros entran solo con su nombre y su contraseña.</div></div>
     <div class="grid2"><div class="field"><label>Nombre del negocio</label><input class="inp" id="af_neg" value="${esc(d.negocio || '')}"></div>
     <div class="field"><label>WhatsApp del cliente</label><input class="inp" id="af_tel" inputmode="tel" value="${esc(d.telefono || '')}" placeholder="300 000 0000"></div></div>
     <div class="grid3"><div class="field"><label>Mensualidad</label><input class="inp money" id="af_val" inputmode="numeric" value="${num(d.valor)}"></div>
@@ -2586,7 +2804,7 @@ function adForm(l) {
     <div class="grid2"><div class="field"><label>Link de pago (opcional)</label><input class="inp" id="af_link" value="${esc(d.linkPago || '')}" placeholder="https://…"></div>
     <div class="field"><label>Tu WhatsApp de cobro</label><input class="inp" id="af_wa" inputmode="tel" value="${esc(d.whatsapp || '')}"></div></div>
     ${nuevo ? '' : `<div class="field"><label>Estado</label><select class="inp" id="af_est"><option value="activa">Activa</option><option value="suspendida" ${d.estado === 'suspendida' ? 'selected' : ''}>Suspendida (se bloquea al cambiar de usuario o abrir la app)</option></select></div>`}
-    <div class="grid2"><div class="field"><label>Clave de mantenimiento (4 números)</label><input class="inp" id="af_mant" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${d.mantHash ? 'Ya tiene · vacío = no cambiar' : aj.mantPin ? 'Vacío = tu clave general' : '4 números'}"></div>
+    <div class="grid2"><div class="field"><label>Clave de mantenimiento (4 números)</label><input class="inp" id="af_mant" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${d.tieneMant || d.mantHash ? 'Ya tiene · vacío = no cambiar' : aj.mantPin ? 'Vacío = tu clave general' : '4 números'}"></div>
     <div class="field"><label>Notas internas</label><input class="inp" id="af_not" value="${esc(d.notas || '')}"></div></div>
     <p class="muted small">Con el usuario <b>Mantenimiento</b> y esta clave entras al negocio con acceso total. El cliente no lo ve en su lista ni lo puede cambiar.</p>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="adGuardar" data-primary>${nuevo ? 'Crear licencia' : 'Guardar'}</button></div>`, true);
@@ -2608,11 +2826,24 @@ A.adGuardar = async () => {
   const mp = $('#af_mant').value.trim();
   if (mp && !/^\d{4}$/.test(mp)) return toast('La clave de mantenimiento debe tener 4 números', 'err');
   const mGen = (S.ad.aj || {}).mantPin;
-  if (mp) data.mantHash = await hashPin(mp, id);
-  else if (!MODAL.id && mGen) data.mantHash = await hashPin(mGen, id);
-  if (MODAL.id) { data.estado = $('#af_est').value; DB.rset('licencias/' + id, data); closeModal(); toast('Guardado', 'ok'); return; }
+  const alias = slugify($('#af_alias').value);
+  if ($('#af_alias').value.trim() && alias.length < 3) return toast('El nombre del link debe tener al menos 3 letras o números', 'err');
+  if (alias) {
+    try { const ex = await DB.rget('alias/' + alias); if (ex && ex.nid !== id) return toast('Ese nombre de link ya lo usa otro cliente', 'err'); }
+    catch (e) { return toast('No se pudo verificar el link: ' + (e.code || e.message), 'err'); }
+    data.alias = alias;
+  }
+  const mantPin = mp || (!MODAL.id && mGen ? mGen : '');
+  if (MODAL.id) {
+    data.estado = $('#af_est').value; await DB.rset('licencias/' + id, data);
+    if (alias) await DB.rset('alias/' + alias, { nid: id }, false);
+    if (mantPin) await setMant(id, mantPin);
+    closeModal(); toast('Guardado', 'ok'); return;
+  }
   try { if (await DB.rget('licencias/' + id)) return toast('Ese código ya tiene licencia', 'err'); } catch (e) { return toast('No se pudo verificar: ' + (e.code || e.message), 'err'); }
-  DB.rset('licencias/' + id, { ...data, estado: 'activa', creado: now(), pagosCount: 0 }, false);
+  await DB.rset('licencias/' + id, { ...data, estado: 'activa', creado: now(), pagosCount: 0 }, false);
+  if (alias) await DB.rset('alias/' + alias, { nid: id }, false);
+  if (mantPin) await setMant(id, mantPin);
   closeModal(); toast('Licencia creada · ' + neg, 'ok');
 };
 
@@ -2638,7 +2869,7 @@ A.adGuardarAj = async () => {
   const antes = (S.ad.aj || {}).mantPin || '', lics = [...(S.ad.lics || [])];
   const d = { valor: val || 99000, whatsapp: $('#aj2_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, instrucciones: $('#aj2_ins').value.trim(), linkPago: link, mantPin: mp };
   DB.rset('nexora/ajustes', d);
-  if (mp && mp !== antes) for (const l of lics) DB.rset('licencias/' + l.id, { mantHash: await hashPin(mp, l.id) });
+  if (mp && mp !== antes) for (const l of lics) await setMant(l.id, mp);
   if ($('#aj2_all').checked) (S.ad.lics || []).forEach(l => DB.rset('licencias/' + l.id, { instrucciones: d.instrucciones, linkPago: d.linkPago, whatsapp: d.whatsapp }));
   closeModal(); toast('Datos de cobro guardados', 'ok');
 };
