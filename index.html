@@ -663,6 +663,7 @@ async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
   const mesas = {}, salas = {}, categorias = {}, productos = {};
   const cfg = { nombre, nit: '', direccion: '', telefono: '', pie: '¡Gracias por su visita!', ticketAncho: 80, imprimirComanda: false, propinaPct: 10, impuestoNombre: 'Impoconsumo', impuestoPct: 8, mostrarImpuesto: true, medios: ['Efectivo', 'Tarjeta', 'Nequi', 'Daviplata', 'Transferencia'], permisos: DEFAULT_PERMS, nombreCocina: 'Cocina' };
   const addMesa = (id, n, sala, k, forma = 'cuadrada') => { mesas[id] = { nombre: String(n), salaId: sala, x: 4 + (k % 6) * 15.5, y: 5 + (Math.floor(k / 6) % 5) * 19, forma, orden: parseInt(n, 10) || k + 1 }; };
+  if (tipo !== 'bar') { cfg.modPedidos = true; cfg.modCocina = true; }
   if (tipo === 'bar') {
     cfg.nombreCocina = 'Barra';
     salas.s1 = { nombre: 'Salón', orden: 1, vista: 'cuadricula' };
@@ -703,7 +704,7 @@ async function buildSeed(nombre, adminPin, usuariosEjemplo, tipo = 'bar') {
     usuarios.u_caja = { nombre: 'Laura', rol: 'cajero', pin: await hashPin('1111', salt), activo: true, orden: 2 };
     usuarios.u_mes1 = { nombre: 'Carlos', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 3 };
     usuarios.u_mes2 = { nombre: 'Andrea', rol: 'mesero', pin: await hashPin('2222', salt), activo: true, orden: 4 };
-    usuarios.u_coc = { nombre: cfg.nombreCocina, rol: 'cocina', pin: await hashPin('3333', salt), activo: true, orden: 5 };
+    if (cfg.modCocina) usuarios.u_coc = { nombre: cfg.nombreCocina, rol: 'cocina', pin: await hashPin('3333', salt), activo: true, orden: 5 };
   }
   return { data: { config: { general: cfg }, salas, mesas, categorias, productos, usuarios }, root: { nombre, creado: now(), tipo } };
 }
@@ -1041,7 +1042,7 @@ function setupHTML() {
   <div class="grid2"><div class="field"><label>Contraseña del Administrador</label><input class="inp" id="st_pin" data-keep inputmode="numeric" maxlength="4" placeholder="4 números"></div>
   <div class="field"><label>Repite la contraseña</label><input class="inp" id="st_pin2" data-keep inputmode="numeric" maxlength="4"></div></div>
   <div class="field"><label>Empezar con</label><select class="inp" id="st_tipo"><option value="bar">Ejemplo de bar: cervezas, botellas y micheladas con mesas</option><option value="restaurante">Ejemplo de restaurante: menú de comidas</option><option value="vacio">Sin productos (lo cargo yo o importo un Excel)</option></select></div>
-  <label class="chk"><input type="checkbox" id="st_us"> Crear usuarios de ejemplo (caja, 2 meseros y barra con contraseñas 1111, 2222 y 3333)</label>
+  <label class="chk"><input type="checkbox" id="st_us"> Crear usuarios de ejemplo para probar (caja 1111 y meseros 2222)</label>
   <button class="btn pri block lg" style="margin-top:12px" data-act="crearNegocio">Crear negocio</button>
   <button class="btn ghost block" style="margin-top:6px" data-act="logoutNegocio">Salir</button>
   <p class="small" style="color:var(--bad);margin-top:10px">${esc(S.setupErr || '')}</p>
@@ -1054,7 +1055,7 @@ const lockLeft = () => Math.max(0, Math.ceil(((+localStorage.getItem('nexorapos_
 function pinHTML() {
   const neg = esc(S.cfg.nombre || '');
   const lk = lockLeft();
-  const demo = DB.mode === 'local' ? `<p class="muted small" style="margin-top:14px">Demo · Administrador 1234 · Laura 1111 (caja) · Carlos 2222 · Andrea 2222 · ${esc(S.cfg.nombreCocina || 'Cocina')} 3333</p>` : '';
+  const demo = DB.mode === 'local' ? `<p class="muted small" style="margin-top:14px">Demo · Administrador 1234 · Laura 1111 (caja) · Carlos 2222 · Andrea 2222${modOn('cocina') ? ' · ' + esc(S.cfg.nombreCocina || 'Cocina') + ' 3333' : ''}</p>` : '';
   return `<div class="center"><div class="card login">
     <div class="logo-big">${LOGO}<div><b>${APP_NAME}</b><div class="muted small">${neg}</div></div></div>
     <h2>Iniciar sesión</h2><p class="muted small" style="margin-bottom:16px">Cada persona entra con su usuario y su contraseña.</p>
@@ -1087,10 +1088,12 @@ A.pinLogin = async () => {
 };
 
 const NAV = [['vender', 'Vender'], ['salon', 'Salón'], ['pedidos', 'Pedidos'], ['cocina', 'Cocina'], ['caja', 'Caja'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['productos', 'Productos'], ['ajustes', 'Ajustes']];
+/* módulos que se pueden apagar por negocio (solo Mantenimiento los ve en Ajustes) */
+const modOn = k => k === 'pedidos' ? !!S.cfg.modPedidos : k === 'cocina' ? !!S.cfg.modCocina : true;
 function canView(k) {
-  if (k === 'pedido') return perm('salon') || perm('pedidos');
+  if (k === 'pedido') return perm('salon') || (perm('pedidos') && modOn('pedidos'));
   if (k === 'vender') return perm('cobrar');
-  return NAV.some(n => n[0] === k) && perm(k);
+  return NAV.some(n => n[0] === k) && perm(k) && modOn(k);
 }
 function defaultView() { const n = NAV.find(([k]) => canView(k)); return n ? n[0] : 'none'; }
 function activePedidos() {
@@ -1368,7 +1371,7 @@ function vPedido() {
       <div class="tot big"><span>Total</span><span>${money(v.estado === 'cerrada' ? (v.total || 0) + (v.propina || 0) : c.total)}</span></div>
       ${editable ? `
         ${vacia ? `<button class="btn lg block" data-act="liberar" style="border-color:var(--bad);color:var(--bad)">${lblCerrar} (sin consumo)</button>` : ''}
-        ${draft.length ? `<button class="btn ok lg block" data-act="enviar">Enviar a ${esc((S.cfg.nombreCocina || 'cocina').toLowerCase())} (${nDraft})</button>` : ''}
+        ${draft.length ? `<button class="btn ok lg block" data-act="enviar">${modOn('cocina') ? 'Enviar a ' + esc((S.cfg.nombreCocina || 'cocina').toLowerCase()) : 'Guardar pedido'} (${nDraft})</button>` : ''}
         <div class="acts"><button class="btn" data-act="precuenta">Precuenta</button><button class="btn" data-act="descuento" ${perm('descuentos') ? '' : 'disabled'}>Descuento</button><button class="btn" data-act="masVenta">Más…</button></div>
         ${canCobrar(v) ? `<button class="btn pri lg block" data-act="cobrar" ${c.total <= 0 ? 'disabled' : ''}>Cobrar ${money(c.total)}</button>` : ''}
       ` : `<button class="btn block" data-act="reimprimir" data-id="${v.id}">Reimprimir comprobante</button>`}
@@ -1442,14 +1445,14 @@ function enviarDraft(v, silent = false) {
   const items = draft.map(i => ({ ...i, id: uid(), estado: 'enviado', enviadoEn: t, por: S.user.nombre }));
   DB.append('ventas', v.id, 'items', items, v.tipo === 'mesa' ? { precuentaEn: null } : {});
   moverStock(items, -1);
-  const coc = items.filter(i => i.cocina);
+  const coc = modOn('cocina') ? items.filter(i => i.cocina) : [];
   if (coc.length) {
     DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: v.meseroNombre || (v.cliente && v.cliente.nombre) || '', items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
     if (S.cfg.imprimirComanda) printComanda(v, coc);
   }
   delete S.drafts[v.id]; saveDrafts();
   logAct('pedido', `Envió ${resumenItems(items)} · ${tituloVenta(v)}`, { ventaId: v.id });
-  if (!silent) toast(coc.length ? 'Pedido enviado a ' + (S.cfg.nombreCocina || 'cocina').toLowerCase() : 'Productos agregados', 'ok');
+  if (!silent) toast(coc.length ? 'Pedido enviado a ' + (S.cfg.nombreCocina || 'cocina').toLowerCase() : 'Pedido guardado', 'ok');
   return items;
 }
 A.enviar = () => { const v = gVenta(S.ventaId); if (v) { enviarDraft(v); render(); } };
@@ -1482,7 +1485,7 @@ A.confAnular = () => {
   }, v);
   if (it) moverStock([{ ...it, cant: Math.min(cant, it.cant), estado: 'enviado' }], +1, { ref: 'Anulado en ' + tituloVenta(v), motivo });
   if (it) logAct('anulacion', `Anuló ${Math.min(cant, it.cant)} ${it.nombre} de ${tituloVenta(v)}${it.controlStock !== false ? ' (vuelve al inventario)' : ''}`, { motivo, ventaId: v.id, monto: it.precio * Math.min(cant, it.cant) });
-  if (it && it.cocina) DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: S.user.nombre, items: [{ nombre: it.nombre, cant, nota: 'Motivo: ' + motivo }], estado: 'pendiente', anulacion: true, creadaEn: now() });
+  if (it && it.cocina && modOn('cocina')) DB.add('comandas', { ventaId: v.id, tipo: v.tipo, titulo: tituloVenta(v), meseroNombre: S.user.nombre, items: [{ nombre: it.nombre, cant, nota: 'Motivo: ' + motivo }], estado: 'pendiente', anulacion: true, creadaEn: now() });
   closeModal(); toast('Producto anulado');
 };
 
@@ -2033,7 +2036,7 @@ A.editProd = el => {
     <div class="grid2 ${p && p.controlStock ? '' : 'hidden'}" id="pr_stk"><div class="field"><label>Stock actual</label><input class="inp" id="pr_st" type="number" step="any" value="${p && p.stock != null ? p.stock : ''}"></div>
     <div class="field"><label>Avisar cuando queden</label><input class="inp" id="pr_min" type="number" min="0" value="${p && p.stockMin ? p.stockMin : ''}" placeholder="Ej: 6"></div>
     <div class="field"><label>Unidades por caja</label><input class="inp" id="pr_pc" type="number" min="0" step="1" value="${p && p.porCaja ? p.porCaja : ''}" placeholder="Ej: 30"></div></div>
-    <label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina / barra (aparece en la comanda)</label>
+    ${modOn('cocina') ? `<label class="chk"><input type="checkbox" id="pr_k" ${!p || p.cocina !== false ? 'checked' : ''}> Se envía a cocina / barra (aparece en la comanda)</label>` : ''}
     <div class="field" style="margin-top:6px"><label>Opciones para escoger al vender (opcional)</label><input class="inp" id="pr_op" value="${esc(p && p.opciones ? p.opciones.join(', ') : '')}" placeholder="Ej: Frutos rojos, Mango biche, Fresa"><span class="muted small">Separa con comas. Al vender, la app pregunta cuál.</span></div>
     <label class="chk"><input type="checkbox" id="pr_a" ${!p || p.activo !== false ? 'checked' : ''}> Activo (disponible para vender)</label>
   </div><div class="mf">${p ? '<button class="btn bad" data-act="delProd" style="margin-right:auto">Eliminar</button>' : ''}<button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveProd" data-primary>Guardar</button></div>`);
@@ -2042,7 +2045,7 @@ A.saveProd = () => {
   const n = $('#pr_n').value.trim(); let pr = parseMoney($('#pr_p').value); if (pr > 0 && pr < 1000) pr *= 1000;
   if (!n) return toast('Escribe el nombre', 'err');
   if (!(pr > 0)) return toast('Escribe el precio', 'err');
-  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k').checked, activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked, opciones: $('#pr_op').value.split(',').map(x => x.trim()).filter(Boolean) };
+  const d = { nombre: n, categoriaId: $('#pr_c').value, precio: pr, cocina: $('#pr_k') ? $('#pr_k').checked : (MODAL.id ? (gProd(MODAL.id) || {}).cocina !== false : true), activo: $('#pr_a').checked, controlStock: $('#pr_cs').checked, opciones: $('#pr_op').value.split(',').map(x => x.trim()).filter(Boolean) };
   if ($('#pr_cost')) { let c = parseMoney($('#pr_cost').value); if (c > 0 && c < 1000 && pr >= 1000) c *= 1000; d.costo = c; }
   d.stockMin = Math.max(0, parseFloat($('#pr_min').value) || 0);
   d.porCaja = Math.max(0, parseInt($('#pr_pc').value, 10) || 0);
@@ -2092,9 +2095,12 @@ function vAjustes() {
     <div class="field"><label>Teléfono</label><input class="inp" id="aj_tel" data-keep value="${esc(c.telefono || '')}"></div></div>
     <div class="field"><label>Dirección</label><input class="inp" id="aj_dir" data-keep value="${esc(c.direccion || '')}"></div>
     <div class="field"><label>Mensaje al final del tiquete</label><input class="inp" id="aj_pie" data-keep value="${esc(c.pie || '')}"></div>
-    <div class="field"><label>Nombre de la pantalla de preparación</label><select class="inp" id="aj_coc" data-keep>${['Cocina', 'Barra', 'Cocina y barra'].map(o => `<option ${(c.nombreCocina || 'Cocina') === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+    ${modOn('cocina') ? `<div class="field"><label>Nombre de la pantalla de preparación</label><select class="inp" id="aj_coc" data-keep>${['Cocina', 'Barra', 'Cocina y barra'].map(o => `<option ${(c.nombreCocina || 'Cocina') === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>` : ''}
     <div class="grid2"><div class="field"><label>Ancho de la impresora</label><select class="inp" id="aj_ancho" data-keep><option value="80">80 mm</option><option value="58" ${Number(c.ticketAncho) === 58 ? 'selected' : ''}>58 mm</option></select></div></div>
-    <label class="chk"><input type="checkbox" id="aj_com" ${c.imprimirComanda ? 'checked' : ''}> Imprimir la comanda al enviar el pedido a cocina</label>
+    ${modOn('cocina') ? `<label class="chk"><input type="checkbox" id="aj_com" ${c.imprimirComanda ? 'checked' : ''}> Imprimir la comanda al enviar el pedido a cocina</label>` : ''}
+    ${S.user && S.user.mant ? `<div style="margin-top:14px;padding:12px 14px;border:1px dashed var(--line);border-radius:12px"><b class="small">Módulos (solo Mantenimiento)</b>
+      <label class="chk"><input type="checkbox" id="aj_mp" ${c.modPedidos ? 'checked' : ''}> Pedidos (mostrador y domicilios)</label>
+      <label class="chk"><input type="checkbox" id="aj_mc" ${c.modCocina ? 'checked' : ''}> Pantalla de cocina / barra (comandas)</label></div>` : ''}
     <button class="btn pri" style="margin-top:12px" data-act="saveNegocio">Guardar</button></div>`;
   if (t === 'salas') body = `<div class="card pad" style="max-width:720px">
     <div class="row between" style="margin-bottom:6px"><h3 class="sec-t" style="margin:0">Salas</h3><div class="row"><button class="btn sm" data-act="goPlano">Editar plano</button><button class="btn sm pri" data-act="editSala">+ Sala</button></div></div>
@@ -2107,8 +2113,8 @@ function vAjustes() {
     </tbody></table><p class="muted small pad">Cada persona entra con su usuario (su nombre) y su contraseña de 4 números. Todo lo que haga queda en el registro de actividad.</p></div>`;
   if (t === 'permisos') {
     const p = c.permisos || {};
-    body = `<div class="card" style="max-width:760px;overflow:auto"><table class="tbl"><thead><tr><th>Permiso</th><th style="text-align:center">Admin</th><th style="text-align:center">Cajero</th><th style="text-align:center">Mesero</th><th style="text-align:center">${esc(rolName('cocina'))}</th></tr></thead><tbody>
-    ${PERMS.map(([k, l]) => `<tr><td>${l}</td><td style="text-align:center"><input type="checkbox" checked disabled style="width:19px;height:19px"></td>${['cajero', 'mesero', 'cocina'].map(r => `<td style="text-align:center"><input type="checkbox" style="width:19px;height:19px;accent-color:var(--accent)" data-ch="perm" data-r="${r}" data-k="${k}" ${((p[r] || {})[k] ?? (DEFAULT_PERMS[r] || {})[k]) ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
+    body = `<div class="card" style="max-width:760px;overflow:auto"><table class="tbl"><thead><tr><th>Permiso</th><th style="text-align:center">Admin</th><th style="text-align:center">Cajero</th><th style="text-align:center">Mesero</th>${modOn('cocina') ? `<th style="text-align:center">${esc(rolName('cocina'))}</th>` : ''}</tr></thead><tbody>
+    ${PERMS.filter(([k]) => modOn(k)).map(([k, l]) => `<tr><td>${l}</td><td style="text-align:center"><input type="checkbox" checked disabled style="width:19px;height:19px"></td>${(modOn('cocina') ? ['cajero', 'mesero', 'cocina'] : ['cajero', 'mesero']).map(r => `<td style="text-align:center"><input type="checkbox" style="width:19px;height:19px;accent-color:var(--accent)" data-ch="perm" data-r="${r}" data-k="${k}" ${((p[r] || {})[k] ?? (DEFAULT_PERMS[r] || {})[k]) ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}
     </tbody></table><p class="muted small pad">El administrador siempre tiene todos los permisos. Los cambios aplican de inmediato en todos los equipos.</p></div>`;
   }
   if (t === 'pagos') body = `<div class="grid2" style="max-width:900px;align-items:start">
@@ -2152,7 +2158,11 @@ A.ajTab = el => { S.ajTab = el.dataset.t; render(); };
 A.goAjustes = el => { S.view = 'ajustes'; S.ajTab = el.dataset.tab || 'negocio'; render(); };
 A.goPlano = () => { S.view = 'salon'; S.editPlano = true; render(); };
 A.saveNegocio = () => {
-  DB.update('config', 'general', { nombre: $('#aj_nombre').value.trim(), nit: $('#aj_nit').value.trim(), telefono: $('#aj_tel').value.trim(), direccion: $('#aj_dir').value.trim(), pie: $('#aj_pie').value.trim(), nombreCocina: $('#aj_coc').value, ticketAncho: parseInt($('#aj_ancho').value, 10), imprimirComanda: $('#aj_com').checked });
+  const d = { nombre: $('#aj_nombre').value.trim(), nit: $('#aj_nit').value.trim(), telefono: $('#aj_tel').value.trim(), direccion: $('#aj_dir').value.trim(), pie: $('#aj_pie').value.trim(), ticketAncho: parseInt($('#aj_ancho').value, 10) };
+  if ($('#aj_coc')) d.nombreCocina = $('#aj_coc').value;
+  if ($('#aj_com')) d.imprimirComanda = $('#aj_com').checked;
+  if ($('#aj_mp')) { d.modPedidos = $('#aj_mp').checked; d.modCocina = $('#aj_mc').checked; }
+  DB.update('config', 'general', d);
   toast('Guardado', 'ok');
 };
 A.savePagos = () => {
@@ -2228,7 +2238,7 @@ A.editUser = el => {
   MODAL = { type: 'user', id: u ? u.id : null };
   openModal(`${mHead(u ? 'Editar usuario' : 'Nuevo usuario')}<div class="mb">
     <div class="field"><label>Nombre</label><input class="inp" id="us_n" value="${esc(u ? u.nombre : '')}" autofocus></div>
-    <div class="grid2"><div class="field"><label>Rol</label><select class="inp" id="us_r">${Object.keys(ROLES).map(k => [k, rolName(k)]).map(([k, l]) => `<option value="${k}" ${u && u.rol === k ? 'selected' : (!u && k === 'mesero' ? 'selected' : '')}>${l}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="field"><label>Rol</label><select class="inp" id="us_r">${Object.keys(ROLES).filter(k => k !== 'cocina' || modOn('cocina') || (u && u.rol === 'cocina')).map(k => [k, rolName(k)]).map(([k, l]) => `<option value="${k}" ${u && u.rol === k ? 'selected' : (!u && k === 'mesero' ? 'selected' : '')}>${l}</option>`).join('')}</select></div>
     <div class="field"><label>Contraseña (4 números)</label><input class="inp" id="us_p" inputmode="numeric" maxlength="4" placeholder="${u ? 'Vacío = no cambiar' : '4 números'}"></div></div>
     <p class="muted small">El usuario para entrar es el nombre, tal como lo escribas aquí.</p>
     <label class="chk"><input type="checkbox" id="us_a" ${!u || u.activo ? 'checked' : ''}> Activo</label>
@@ -2909,7 +2919,7 @@ function impHTML() {
   const opt = sel => `<option value="-1">— no usar —</option>` + IMP.headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${esc(h)}</option>`).join('');
   return `${mHead('Importar · ' + esc(IMP.fileName))}<div class="mb">
     ${IMP.wb.SheetNames.length > 1 ? `<div class="field"><label>Hoja del archivo</label><select class="inp" data-ch="impSheet">${IMP.wb.SheetNames.map(s => `<option ${s === IMP.sheet ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>` : ''}
-    <div class="grid3">${IMP_CAMPOS.map(([k, l]) => `<div class="field"><label>${l}</label><select class="inp" data-ch="impMap" data-k="${k}">${opt(IMP.map[k])}</select></div>`).join('')}</div>
+    <div class="grid3">${IMP_CAMPOS.filter(([k]) => k !== 'comanda' || modOn('cocina')).map(([k, l]) => `<div class="field"><label>${l}</label><select class="inp" data-ch="impMap" data-k="${k}">${opt(IMP.map[k])}</select></div>`).join('')}</div>
     <label class="chk"><input type="checkbox" id="imp_upd" ${IMP.upd !== false ? 'checked' : ''} data-ch="impUpd"> Si el producto ya existe (mismo nombre), actualizar su precio, costo y stock</label>
     ${S.productos.length ? `<label class="chk"><input type="checkbox" id="imp_rep" ${IMP.rep ? 'checked' : ''} data-ch="impRep"> Borrar los productos que no están en este archivo (por ejemplo, el menú de ejemplo) — ${S.productos.filter(p => !rows.some(r => r.existe && r.existe.id === p.id)).length} productos</label>` : ''}
     <div class="paysum ${rows.length ? 'okk' : 'falta'}" style="margin-top:8px"><span>${rows.length} productos listos · ${nuevos} nuevos · ${upd} ya existen</span><span>${ign ? ign + ' filas ignoradas' : ''}</span></div>
@@ -3087,7 +3097,7 @@ function vFinalizar(st) {
   moverStock(items, -1);
   logAct('venta', `Venta #${numero} · ${money(subtotal + propina)} · ${v.pagos.map(p => p.medio).join(' + ')} · ${resumenItems(items)}`, { ventaId: id, monto: subtotal + propina });
   const coc = items.filter(i => i.cocina);
-  if (coc.length) DB.add('comandas', { ventaId: id, tipo: 'mostrador', titulo: 'Venta #' + numero, meseroNombre: S.user.nombre, items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
+  if (coc.length && modOn('cocina')) DB.add('comandas', { ventaId: id, tipo: 'mostrador', titulo: 'Venta #' + numero, meseroNombre: S.user.nombre, items: coc.map(i => ({ nombre: i.nombre, cant: i.cant, nota: i.nota || '' })), estado: 'pendiente', anulacion: false, creadaEn: t });
   const imprimir = $('#pay_pr').checked; localStorage.setItem('nexorapos_print', imprimir ? '1' : '0');
   S.cart = []; saveCart(); closeModal(); PAY = null; S.vShowCart = false;
   if (imprimir) printComprobante(v);
