@@ -349,6 +349,18 @@ a.btn{text-decoration:none}
   .ie-tbl td.ie-t{grid-column:1/-1;text-align:right;font-size:12px;line-height:1}
 }
 
+.planes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.plan{position:relative;border:1px solid var(--line);border-radius:14px;padding:14px 12px 12px;background:var(--card,#fff);display:flex;flex-direction:column;gap:3px;text-align:left}
+.plan.plan-top{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.plan.act{background:var(--bg)}
+.plan-n{font-size:14px}
+.plan-t{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.plan-ah{font-size:12px;font-weight:650;color:var(--ok);margin-bottom:6px;min-height:16px}
+.plan-tag{position:absolute;top:-9px;right:10px;font-size:11px;font-weight:700;background:var(--ok);color:#fff;border-radius:99px;padding:2px 8px}
+.plan-tag.soft{background:var(--bg);color:var(--ink,#111);border:1px solid var(--line)}
+.plan .btn{margin-top:auto}
+@media (max-width:640px){.planes{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-t{font-size:18px}}
+
 </style>
 </head>
 <body>
@@ -418,6 +430,17 @@ const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f ? f(x) : x) || 0), 0)
 const endOfDay = t => { const d = new Date(t); d.setHours(23, 59, 59, 999); return d.getTime(); };
 const addMonths = (t, n) => { const d = new Date(t); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, last)); return d.getTime(); };
 /* estado de una licencia mensual */
+/* planes de pago de la licencia: mensual a precio normal, y descuento por pagar varios meses */
+const PLANES_DEF = { 3: 15, 6: 20, 12: 30 };
+const PLAN_NOMBRE = { 1: 'Mensual', 3: 'Trimestral', 6: 'Semestral', 12: 'Anual' };
+function planesDe(l) {
+  const v = Number((l && l.valor) || 0), desc = { ...PLANES_DEF, ...((l && l.descuentos) || {}) };
+  return [1, 3, 6, 12].map(m => {
+    const pct = m === 1 ? 0 : Math.max(0, Math.min(90, Number(desc[m]) || 0));
+    const lleno = v * m, total = Math.round(lleno * (100 - pct) / 100 / 100) * 100;
+    return { meses: m, nombre: PLAN_NOMBRE[m], pct, total, porMes: Math.round(total / m / 100) * 100, ahorro: lleno - total };
+  });
+}
 const LIC_LABEL = { aldia: ['ok', 'Al día'], aviso: ['warn', 'Por vencer'], vencida: ['bad', 'Vencida · en gracia'], bloqueada: ['bad', 'Bloqueada'], suspendida: ['', 'Suspendida'], pendiente: ['', 'Sin licencia'] };
 function licStatus(l, t = Date.now()) {
   if (!l) return { k: 'pendiente' };
@@ -949,6 +972,25 @@ function payBoxHTML(l) {
     ${l.instrucciones ? `<div class="small" style="padding-top:8px;white-space:pre-line">${esc(l.instrucciones)}</div>` : ''}
     ${safeUrl(l.linkPago) ? `<a class="btn pri block" style="margin-top:10px" href="${esc(safeUrl(l.linkPago))}" target="_blank" rel="noopener">Pagar en línea</a>` : ''}</div>`;
 }
+/* el cliente elige su plan: le llega a NEXORA un WhatsApp con el plan y el valor */
+function planWa(l, p) {
+  const wa = String((l && l.whatsapp) || SOPORTE_WHATSAPP).replace(/\D/g, '');
+  const neg = (l && l.negocio) || S.cfg.nombre || 'mi negocio';
+  const msg = `Hola, soy de ${neg} (código ${DB.nid}). Quiero pagar el plan ${p.nombre} de NEXORA POS: ${money(p.total)}${p.meses > 1 ? ` por ${p.meses} meses (${p.pct}% de descuento)` : ''}. Te envío el comprobante.`;
+  return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+}
+function planesHTML(l) {
+  if (!l || !(Number(l.valor) > 0)) return '';
+  const ps = planesDe(l);
+  return `<div class="planes">${ps.map(p => `<div class="plan${p.meses === 12 ? ' plan-top' : ''}${l.plan === p.nombre ? ' act' : ''}">
+      ${p.meses === 12 ? '<span class="plan-tag">Más ahorro</span>' : p.pct ? `<span class="plan-tag soft">−${p.pct}%</span>` : ''}
+      <b class="plan-n">${p.nombre}${l.plan === p.nombre ? ' <span class="muted small" style="font-weight:600">· tu plan</span>' : ''}</b>
+      <div class="plan-t">${money(p.total)}</div>
+      <div class="muted small">${p.meses === 1 ? 'cada mes' : `${money(p.porMes)} al mes · ${p.meses} meses`}</div>
+      <div class="plan-ah">${p.ahorro > 0 ? 'Ahorras ' + money(p.ahorro) : '&nbsp;'}</div>
+      <a class="btn ${p.meses === 12 ? 'ok' : ''} sm block" href="${planWa(l, p)}" target="_blank" rel="noopener">Elegir ${p.nombre.toLowerCase()}</a>
+    </div>`).join('')}</div>`;
+}
 function licWa(l, pendiente) {
   const wa = String((l && l.whatsapp) || SOPORTE_WHATSAPP).replace(/\D/g, '');
   const neg = (l && l.negocio) || S.cfg.nombre || 'mi negocio';
@@ -962,9 +1004,10 @@ function bloqueoHTML() {
     suspendida: ['Servicio suspendido', 'El servicio de este negocio está suspendido. Comunícate con tu proveedor para reactivarlo. Tus datos están guardados.'],
     bloqueada: ['Mensualidad vencida', `La mensualidad venció el ${fecha(l.pagadoHasta)}. Tus datos están guardados y seguros: el sistema se reactiva solo apenas se registre el pago.`],
   }[st.k] || ['Sistema bloqueado', ''];
-  return `<div class="center"><div class="card login" style="max-width:480px">
+  return `<div class="center"><div class="card login" style="max-width:${st.k !== 'pendiente' ? 640 : 480}px">
     <div class="logo-big">${LOGO}<b>${APP_NAME}</b></div>
     <h2>${T[0]}</h2><p class="muted" style="margin:8px 0 14px">${T[1]}</p>
+    ${st.k !== 'pendiente' && planesHTML(l) ? `<p class="small" style="margin-bottom:8px;font-weight:600">Elige tu plan para reactivar:</p>${planesHTML(l)}` : ''}
     ${st.k !== 'pendiente' ? payBoxHTML(l) : ''}
     <div class="field"><label>Código del negocio</label><div class="row"><input class="inp" readonly value="${esc(DB.nid)}"><button class="btn" data-act="copyCode">Copiar</button></div></div>
     <a class="btn ok lg block" href="${licWa(l, st.k === 'pendiente')}" target="_blank" rel="noopener">${st.k === 'pendiente' ? 'Pedir activación por WhatsApp' : 'Enviar comprobante por WhatsApp'}</a>
@@ -974,7 +1017,7 @@ function bloqueoHTML() {
 function licBar() {
   if (!S.user) return '';
   const st = licState();
-  const btn = '<button data-act="licPagar">Cómo pagar</button>';
+  const btn = '<button data-act="licPagar">Ver planes y pagar</button>';
   if (st.bloqueado) return `<div class="lic-bar bad">La licencia de este sistema está ${st.k === 'suspendida' ? 'suspendida' : 'vencida'}. Al cambiar de usuario o cerrar, el sistema quedará bloqueado. ${btn}</div>`;
   if (st.k === 'vencida' && ['admin', 'cajero'].includes(S.user.rol)) return `<div class="lic-bar bad">La mensualidad venció el ${fecha(st.l.pagadoHasta)}. El sistema se bloquea el ${fecha(st.fin)} si no se registra el pago. ${btn}</div>`;
   if (st.k === 'aviso' && S.user.rol === 'admin') return `<div class="lic-bar warn">Tu mensualidad vence ${st.dias <= 0 ? 'hoy' : 'en ' + st.dias + (st.dias === 1 ? ' día' : ' días')} (${fecha(st.l.pagadoHasta)}). ${btn}</div>`;
@@ -983,7 +1026,9 @@ function licBar() {
 A.licPagar = () => {
   const st = licState(); const l = st.l || {};
   MODAL = { type: 'licPagar' };
-  openModal(`${mHead('Mensualidad NEXORA POS')}<div class="mb">${payBoxHTML(l)}
+  openModal(`${mHead('Planes NEXORA POS')}<div class="mb">
+    ${planesHTML(l) ? `<p class="small" style="margin-bottom:10px">Elige tu plan. Entre más meses pagas, más ahorras.</p>${planesHTML(l)}` : ''}
+    ${payBoxHTML(l)}
     <p class="muted small">Cuando pagues, envía el comprobante por WhatsApp. El sistema se actualiza solo apenas se registre el pago.</p></div>
     <div class="mf"><button class="btn" data-act="closeModal">Cerrar</button><a class="btn ok" href="${licWa(l)}" target="_blank" rel="noopener">Enviar comprobante</a></div>`);
 };
@@ -2383,10 +2428,12 @@ function licCardHTML() {
   return `<div class="card pad" style="max-width:640px;margin-bottom:16px"><h3 class="sec-t">Suscripción</h3>
     ${l ? `<div class="list-row"><span>Estado</span><span class="tag ${lb[0]}">${lb[1]}</span></div>
     <div class="list-row"><span>Mensualidad</span><b>${money(l.valor)}</b></div>
-    <div class="list-row"><span>Pagado hasta</span><b>${fecha(l.pagadoHasta)}</b></div>` : '<p class="muted small">No se pudo consultar la licencia en este momento.</p>'}
+    ${l.plan ? `<div class="list-row"><span>Último plan pagado</span><b>${esc(l.plan)}</b></div>` : ''}
+    <div class="list-row"><span>Pagado hasta</span><b>${fecha(l.pagadoHasta)}</b></div>
+    ${planesHTML(l) ? `<h4 style="margin:14px 0 8px;font-size:14px">Planes de pago</h4>${planesHTML(l)}` : ''}` : '<p class="muted small">No se pudo consultar la licencia en este momento.</p>'}
     <div class="list-row"><span>Código del negocio</span><span class="row"><b class="small">${esc(DB.nid)}</b><button class="btn sm" data-act="copyCode">Copiar</button></span></div>
     <div style="margin:10px 0 4px"><button class="btn" data-act="licPagar">Cómo pagar</button></div>
-    ${pagos.length ? `<h4 style="margin:14px 0 4px;font-size:14px">Pagos registrados</h4>${pagos.map(p => `<div class="list-row"><span>${fecha(p.fecha)} <span class="muted small">· ${esc(p.medio || '')} · ${p.meses || 1} ${(p.meses || 1) === 1 ? 'mes' : 'meses'}</span></span><b>${money(p.monto)}</b></div>`).join('')}` : ''}
+    ${pagos.length ? `<h4 style="margin:14px 0 4px;font-size:14px">Pagos registrados</h4>${pagos.map(p => `<div class="list-row"><span>${fecha(p.fecha)} <span class="muted small">· ${esc(p.medio || '')} · ${p.plan ? esc(p.plan) + ' · ' : ''}${p.meses || 1} ${(p.meses || 1) === 1 ? 'mes' : 'meses'}</span></span><b>${money(p.monto)}</b></div>`).join('')}` : ''}
   </div>`;
 }
 A.ajTab = el => { S.ajTab = el.dataset.t; render(); };
@@ -2713,6 +2760,7 @@ function cobroMsg(l) {
   else m = `Hola ${l.negocio}, te recordamos que la mensualidad de NEXORA POS por ${money(l.valor)} vence el ${fecha(l.pagadoHasta)}. Puedes pagar así:`;
   if (l.instrucciones) m += '\n' + l.instrucciones;
   if (safeUrl(l.linkPago)) m += '\nPago en línea: ' + l.linkPago;
+  if (Number(l.valor) > 0) m += '\n\nPlanes con descuento:\n' + planesDe(l).map(p => `• ${p.nombre}: ${money(p.total)}${p.pct ? ` (${p.meses} meses, ahorras ${p.pct}%)` : ''}`).join('\n');
   return m + '\n¡Gracias!';
 }
 const waCobro = l => `https://wa.me/${telWa(l.telefono)}?text=${encodeURIComponent(cobroMsg(l))}`;
@@ -2762,7 +2810,7 @@ A.adPago = el => {
   const l = adLic(el.dataset.id); if (!l) return;
   MODAL = { type: 'adPago', id: l.id };
   openModal(`${mHead('Registrar pago · ' + esc(l.negocio))}<div class="mb">
-    <div class="grid2"><div class="field"><label>Meses que paga</label><select class="inp" id="ap_n" data-ch="adMeses">${[1, 2, 3, 6, 12].map(n => `<option value="${n}">${n} ${n === 1 ? 'mes' : 'meses'}</option>`).join('')}</select></div>
+    <div class="grid2"><div class="field"><label>Plan que paga</label><select class="inp" id="ap_n" data-ch="adMeses">${planesDe(l).map(p => `<option value="${p.meses}">${p.nombre}${p.pct ? ' (−' + p.pct + '%)' : ''} · ${money(p.total)}</option>`).join('')}<option value="2">2 meses (sin descuento) · ${money((l.valor || 0) * 2)}</option></select></div>
     <div class="field"><label>Valor recibido</label><input class="inp money" id="ap_m" inputmode="numeric" value="${num(l.valor)}"></div></div>
     <div class="grid2"><div class="field"><label>Medio de pago</label><select class="inp" id="ap_med">${MEDIOS_COBRO.map(m => `<option>${m}</option>`).join('')}</select></div>
     <div class="field"><label>Fecha del pago</label><input class="inp" type="date" id="ap_f" value="${dayInput(Date.now())}"></div></div>
@@ -2776,17 +2824,19 @@ function adPrev() {
   const l = adLic(MODAL && MODAL.id); const el = $('#ap_prev'); if (!l || !el) return;
   el.innerHTML = `<span>Queda pagado hasta</span><span>${fecha(nuevoHasta(l, +$('#ap_n').value))}</span>`;
 }
-CH.adMeses = el => { const l = adLic(MODAL.id); if (l) $('#ap_m').value = num((l.valor || 0) * +el.value); adPrev(); };
+const planPago = (l, n) => planesDe(l).find(p => p.meses === n) || { meses: n, nombre: n + ' meses', pct: 0, total: (l.valor || 0) * n };
+CH.adMeses = el => { const l = adLic(MODAL.id); if (l) $('#ap_m').value = num(planPago(l, +el.value).total); adPrev(); };
 A.adGuardarPago = () => {
   const l = adLic(MODAL.id); if (!l) return;
   const n = +$('#ap_n').value; let m = parseMoney($('#ap_m').value); if (m > 0 && m < 1000) m *= 1000;
   if (!(m > 0)) return toast('Escribe el valor recibido', 'err');
   const fv = $('#ap_f').value; const fp = fv ? new Date(fv + 'T12:00:00').getTime() : now();
   const numero = (l.pagosCount || 0) + 1;
-  const pago = { fecha: fp, monto: m, meses: n, medio: $('#ap_med').value, nota: $('#ap_nota').value.trim(), desde: l.pagadoHasta || null, hasta: nuevoHasta(l, n), registradoEn: now(), numero };
+  const pl = planPago(l, n);
+  const pago = { fecha: fp, monto: m, meses: n, plan: pl.nombre, descuento: pl.pct, medio: $('#ap_med').value, nota: $('#ap_nota').value.trim(), desde: l.pagadoHasta || null, hasta: nuevoHasta(l, n), registradoEn: now(), numero };
   const pid = DB.rnewId('licencias/' + l.id + '/pagos');
   DB.rset(`licencias/${l.id}/pagos/${pid}`, pago, false);
-  DB.rset('licencias/' + l.id, { pagadoHasta: pago.hasta, estado: 'activa', ultimoPago: fp, ultimoMonto: m, pagosCount: numero });
+  DB.rset('licencias/' + l.id, { pagadoHasta: pago.hasta, estado: 'activa', ultimoPago: fp, ultimoMonto: m, pagosCount: numero, plan: pl.nombre });
   const rec = $('#ap_rec').checked;
   closeModal(); toast(`Pago registrado · ${l.negocio} queda al día hasta el ${fecha(pago.hasta)}`, 'ok');
   if (rec) printRecibo(l, pago);
@@ -2799,7 +2849,7 @@ function printRecibo(l, p) {
     <div class="r"><span>Fecha del pago</span><span>${fecha(p.fecha)}</span></div><hr>
     <p><b>Recibimos de:</b> ${esc(l.negocio)}</p>
     <p><b>La suma de:</b> ${money(p.monto)}</p>
-    <p><b>Por concepto de:</b> mensualidad del sistema NEXORA POS (${p.meses} ${p.meses === 1 ? 'mes' : 'meses'})${p.desde ? `, periodo del ${fecha(p.desde + 1)} al ${fecha(p.hasta)}` : `, servicio hasta el ${fecha(p.hasta)}`}.</p>
+    <p><b>Por concepto de:</b> ${p.plan && p.meses > 1 ? `plan ${esc(p.plan)} del sistema NEXORA POS (${p.meses} meses${p.descuento ? `, ${p.descuento}% de descuento` : ''})` : `mensualidad del sistema NEXORA POS (${p.meses} ${p.meses === 1 ? 'mes' : 'meses'})`}${p.desde ? `, periodo del ${fecha(p.desde + 1)} al ${fecha(p.hasta)}` : `, servicio hasta el ${fecha(p.hasta)}`}.</p>
     <p><b>Medio de pago:</b> ${esc(p.medio)}${p.nota ? ' · ' + esc(p.nota) : ''}</p><hr>
     <br><br><div>______________________________</div><div>${esc(NEXORA_INFO.nombre)}</div>`, true);
 }
@@ -2814,6 +2864,8 @@ A.adDetalle = async el => {
     <div class="list-row"><span>Mensualidad</span><b>${money(l.valor)}</b></div>
     <div class="list-row"><span>Pagado hasta</span><b>${fecha(l.pagadoHasta)}</b></div>
     <div class="list-row"><span>Días de gracia</span><b>${l.diasGracia ?? 3}</b></div>
+    ${l.plan ? `<div class="list-row"><span>Último plan pagado</span><b>${esc(l.plan)}</b></div>` : ''}
+    <div class="list-row"><span>Planes</span><span class="small" style="text-align:right">${planesDe(l).map(p => `${p.nombre} ${money(p.total)}`).join(' · ')}</span></div>
     <div class="list-row"><span>Código del negocio</span><b class="small">${esc(l.id)}</b></div>
     <div class="list-row"><span>Link del cliente${l.alias ? '' : ' <span class="muted small">(ponle un nombre en Editar)</span>'}</span><span class="row"><b class="small" style="word-break:break-all">${esc(linkCliente(l))}</b><button class="btn sm" data-act="adCopiarLink" data-id="${l.id}">Copiar</button></span></div>
     ${l.notas ? `<p class="small muted" style="margin-top:8px">${esc(l.notas)}</p>` : ''}
@@ -2883,7 +2935,7 @@ A.adGuardar = async () => {
     closeModal(); toast('Guardado', 'ok'); return;
   }
   try { if (await DB.rget('licencias/' + id)) return toast('Ese código ya tiene licencia', 'err'); } catch (e) { return toast('No se pudo verificar: ' + (e.code || e.message), 'err'); }
-  await DB.rset('licencias/' + id, { ...data, estado: 'activa', creado: now(), pagosCount: 0 }, false);
+  await DB.rset('licencias/' + id, { ...data, descuentos: (S.ad.aj || {}).descuentos || PLANES_DEF, estado: 'activa', creado: now(), pagosCount: 0 }, false);
   if (alias) await DB.rset('alias/' + alias, { nid: id }, false);
   if (mantPin) await setMant(id, mantPin);
   closeModal(); toast('Licencia creada · ' + neg, 'ok');
@@ -2900,6 +2952,11 @@ A.adAjustes = () => {
     <div class="field"><label>Instrucciones de pago</label><textarea class="inp" id="aj2_ins" placeholder="Ej: Nequi 300 000 0000 a nombre de …">${esc(aj.instrucciones || '')}</textarea></div>
     <div class="field"><label>Link de pago (opcional)</label><input class="inp" id="aj2_link" value="${esc(aj.linkPago || '')}" placeholder="https://…"></div>
     <div class="field"><label>Tu clave de mantenimiento (4 números)</label><input class="inp" id="aj2_mant" inputmode="numeric" maxlength="4" autocomplete="off" value="${esc(aj.mantPin || '')}" placeholder="Ej: 2580"><div class="muted small" style="margin-top:4px">Con el usuario <b>Mantenimiento</b> y esta clave entras a cualquier negocio con acceso total. Al guardar se aplica a todos tus clientes.</div></div>
+    <div class="field"><label>Descuentos por plan</label><div class="grid3">
+      <div><div class="muted small">Trimestral (%)</div><input class="inp" id="aj2_d3" inputmode="numeric" value="${esc(String(((aj.descuentos || {})[3]) ?? PLANES_DEF[3]))}"></div>
+      <div><div class="muted small">Semestral (%)</div><input class="inp" id="aj2_d6" inputmode="numeric" value="${esc(String(((aj.descuentos || {})[6]) ?? PLANES_DEF[6]))}"></div>
+      <div><div class="muted small">Anual (%)</div><input class="inp" id="aj2_d12" inputmode="numeric" value="${esc(String(((aj.descuentos || {})[12]) ?? PLANES_DEF[12]))}"></div></div>
+      <div class="muted small" style="margin-top:4px">El plan mensual va a precio normal. Al guardar, los descuentos se aplican a todos tus clientes.</div></div>
     <label class="chk"><input type="checkbox" id="aj2_all"> Actualizar también las instrucciones, el link y el WhatsApp de todos los clientes</label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="adGuardarAj" data-primary>Guardar</button></div>`);
 };
@@ -2909,9 +2966,12 @@ A.adGuardarAj = async () => {
   const mp = $('#aj2_mant').value.trim();
   if (mp && !/^\d{4}$/.test(mp)) return toast('La clave de mantenimiento debe tener 4 números', 'err');
   const antes = (S.ad.aj || {}).mantPin || '', lics = [...(S.ad.lics || [])];
-  const d = { valor: val || 99000, whatsapp: $('#aj2_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, instrucciones: $('#aj2_ins').value.trim(), linkPago: link, mantPin: mp };
+  const pct = id => Math.max(0, Math.min(90, parseInt($(id).value, 10) || 0));
+  const descuentos = { 3: pct('#aj2_d3'), 6: pct('#aj2_d6'), 12: pct('#aj2_d12') };
+  const d = { valor: val || 99000, whatsapp: $('#aj2_wa').value.replace(/\D/g, '') || SOPORTE_WHATSAPP, instrucciones: $('#aj2_ins').value.trim(), linkPago: link, mantPin: mp, descuentos };
   DB.rset('nexora/ajustes', d);
   if (mp && mp !== antes) for (const l of lics) await setMant(l.id, mp);
+  lics.forEach(l => DB.rset('licencias/' + l.id, { descuentos }));
   if ($('#aj2_all').checked) (S.ad.lics || []).forEach(l => DB.rset('licencias/' + l.id, { instrucciones: d.instrucciones, linkPago: d.linkPago, whatsapp: d.whatsapp }));
   closeModal(); toast('Datos de cobro guardados', 'ok');
 };
