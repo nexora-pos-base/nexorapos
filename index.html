@@ -1094,6 +1094,48 @@ async function migrarPines() {
     catch (e) { console.warn('migración de contraseñas', e); MIG_PIN = false; return; }
   }
 }
+/* una sola vez: nombres y precios como están en Fudo (fotos del 20-nov). Los costos y el stock no se tocan. */
+const CORRECCION_FUDO = {
+  'Águila Original': ['AGUILA ORIGINAL', 4000], 'Águila Light': ['AGUILA LIGHT', 4000], 'Costeñita': ['COSTEÑITA', 4000],
+  'Budweiser': ['BUDWEISER', 4000], 'Stella': ['STELLA', 6000], 'Smirnoff': ['SMIRNOFF', 14000], 'Coronita': ['CORONITA', 5000],
+  'Electrolit': ['ELECTROLIT', 12000], 'Agua': ['AGUA', 3000],
+  'Costeña': ['COSTEÑA'], 'Póker': ['POKER'], 'Club Colombia': ['CLUB COLOMBIA'], 'Heineken': ['HEINEKEN'], 'Soda Bretaña': ['SODA BRETAÑA'],
+  'Gatorade': ['GATORADE'], 'Coca Cola': ['COCA COLA'], 'Czechvar': ['CZECHVAR'], 'Liefmans': ['LIEFMANS'], 'BBC': ['BBC'],
+  'Aguardiente Limo': ['LIMOSINA AGUARDIENTE ANTIOQUEÑO', 85000], 'Aguardiente Pipo': ['PIPONA AGUARDIENTE ANTIOQUEÑO', 70000],
+  'Aguardiente G': ['GARRAFON AGUARDIENTE ANTIOQUEÑO', 130000], 'Amarillo': ['AGUARDIENTE AMARILLO', 85000],
+  'Amarillo Garrafa': ['GARRAFON AGUARDIENTE AMARILLO', 125000], 'Medellín Limo': ['LIMOSINA RON MEDELLIN', 90000],
+  'Medellín G': ['GARRAFON RON MEDELLIN', 140000], '8 Años': ['RON MEDELLIN 8 AÑOS', 115000], 'Caldas G': ['GARRAFON RON CALDAS', 135000],
+  'Caldas Pipo': ['PIPONA CALDAS', 70000], 'Caldas Litro': ['LITRO CALDAS', 90000], 'Old Parr 750': ['OLD PARR', 220000],
+  "Buchanan's Master 750": ['BUCHANANS DELUXE', 255000],
+  'Michelada tradicional': ['MICHELADA 8K', 8000], 'Soda normal': ['MICHELADA 10K', 10000], 'Soda cerveza': ['MICHELADA 12K', 12000],
+  'Michelada Corona': ['MICHELADA 15K', 15000], 'Michelada Smirnoff': ['MICHELADA SMIRNOFF', 18000],
+};
+const OCULTAR_FUDO = ["Buchanan's Master Litro", 'Old Parr Litro', 'JP'];
+const NUEVOS_FUDO = [['DESCORCHE #1', 20000], ['DESCORCHE #2', 30000], ['DESCORCHE #3', 50000]];
+let MIG_FUDO = false;
+function corregirComoFudo() {
+  if (MIG_FUDO || !puedeAdministrar() || !S.cfg || !S.cfg.permisos || !S.productos.length || !S.categorias.length) return;
+  if (DB.mode === 'local' && !/[?&]migfudo=1/.test(location.search)) return; // en la demo solo para pruebas
+  MIG_FUDO = true; if (S.cfg.correccionFudoV1) return;
+  const tabla = {}; Object.entries(CORRECCION_FUDO).forEach(([k, v]) => tabla[norm(k)] = v);
+  const ocultar = new Set(OCULTAR_FUDO.map(norm));
+  let n = 0;
+  S.productos.forEach(p => {
+    const k = norm(p.nombre), c = tabla[k];
+    if (c) { const d = { nombre: c[0] }; if (c[1]) d.precio = c[1]; DB.update('productos', p.id, d); n++; }
+    else if (ocultar.has(k) && p.activo !== false) { DB.update('productos', p.id, { activo: false }); n++; }
+  });
+  const cat = S.categorias.find(c => norm(c.nombre) === 'botellas');
+  if (cat) {
+    const maxOrden = Math.max(0, ...S.productos.map(p => Number(p.orden) || 0));
+    NUEVOS_FUDO.forEach(([nombre, precio], i) => {
+      if (S.productos.some(p => norm(p.nombre) === norm(nombre))) return;
+      DB.add('productos', { nombre, categoriaId: cat.id, precio, costo: 0, cocina: true, activo: true, controlStock: false, stockMin: 0, orden: maxOrden + i + 1 }); n++;
+    });
+  }
+  DB.update('config', 'general', { correccionFudoV1: true });
+  if (n && S.user) logAct('productos', `Nombres y precios actualizados como en Fudo (${n} productos)`);
+}
 /* una sola vez por negocio: llena "unidades por caja" de los productos del bar que aún no lo tengan */
 let MIG_PC = false;
 function migrarPorCaja() {
@@ -1105,7 +1147,7 @@ function migrarPorCaja() {
 }
 function doRender() {
   rq = false;
-  try { migrarPorCaja(); syncAcceso(); migrarPines(); } catch (e) { console.warn(e); }
+  try { migrarPorCaja(); syncAcceso(); migrarPines(); corregirComoFudo(); } catch (e) { console.warn(e); }
   if (S.dragging) { setTimeout(render, 150); return; }
   const root = $('#root');
   const act = document.activeElement;
