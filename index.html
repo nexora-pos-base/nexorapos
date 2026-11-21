@@ -361,6 +361,10 @@ a.btn{text-decoration:none}
 .plan .btn{margin-top:auto}
 @media (max-width:640px){.planes{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-t{font-size:18px}}
 
+.mesa .mc{font-size:12.5px;font-weight:700;color:var(--ink2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.salon-q{width:220px;min-height:38px;padding:6px 12px}
+@media (max-width:640px){.salon-q{width:100%}}
+
 </style>
 </head>
 <body>
@@ -876,9 +880,9 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 const first = s => String(s || '').split(' ')[0];
 const medios = () => (S.cfg.medios && S.cfg.medios.length ? S.cfg.medios : ['Efectivo']);
 
-function tituloVenta(v) {
+function tituloVenta(v, base) {
   if (!v) return '';
-  if (v.tipo === 'mesa') { const m = gMesa(v.mesaId); return 'Mesa ' + (m ? m.nombre : '?'); }
+  if (v.tipo === 'mesa') { const m = gMesa(v.mesaId), t = 'Mesa ' + (m ? m.nombre : '?'); return !base && v.cliente && v.cliente.nombre ? t + ' · ' + v.cliente.nombre : t; }
   if (v.rapida) return 'Venta #' + (v.numero || '');
   return (v.tipo === 'domicilio' ? 'Domicilio' : 'Mostrador') + ' #' + (v.numero || '');
 }
@@ -1457,20 +1461,23 @@ function vSalon() {
   if (!S.salaId || !salas.find(s => s.id === S.salaId)) S.salaId = salas[0].id;
   const abiertas = ventasAbiertas().filter(v => v.tipo === 'mesa');
   const ocup = S.mesas.filter(m => ventaDeMesa(m.id)).length;
-  const mesas = S.mesas.filter(m => m.salaId === S.salaId);
+  const q = norm(S.salonQ || '').trim();
+  const busca = m => { const v = ventaDeMesa(m.id); return norm(m.nombre).includes(q) || (!!v && !!v.cliente && norm(v.cliente.nombre || '').includes(q)) || (!!v && norm(v.meseroNombre || '').includes(q)); };
+  const mesas = q ? S.mesas.filter(busca) : S.mesas.filter(m => m.salaId === S.salaId);
   const salaAct = salas.find(s => s.id === S.salaId) || {};
-  const grid = salaAct.vista === 'cuadricula' || (salaAct.vista !== 'plano' && mesas.length > 24);
+  const grid = !!q || salaAct.vista === 'cuadricula' || (salaAct.vista !== 'plano' && mesas.length > 24);
   S.salonGrid = grid;
   const occSala = sid => S.mesas.filter(m => m.salaId === sid && ventaDeMesa(m.id)).length;
   const ed = S.editPlano;
   return topHTML('Salón', `<span class="tag warn">${ocup}/${S.mesas.length} ocupadas</span><span class="tag">${money(sum(abiertas, v => calc(v).total))} en mesas</span>`) + `
   <div class="wrap">
     <div class="salon-bar">
-      <div class="tabs">${salas.map(s => `<button class="${s.id === S.salaId ? 'on' : ''}" data-act="sala" data-id="${s.id}">${esc(s.nombre)} · ${occSala(s.id)}/${S.mesas.filter(m => m.salaId === s.id).length}</button>`).join('')}</div>
+      <input class="inp salon-q" id="salon_q" data-in="salonQ" data-keep type="search" autocomplete="off" placeholder="Buscar mesa o cliente…" value="${esc(S.salonQ || '')}">
+      <div class="tabs">${salas.map(s => `<button class="${s.id === S.salaId && !q ? 'on' : ''}" data-act="sala" data-id="${s.id}">${esc(s.nombre)} · ${occSala(s.id)}/${S.mesas.filter(m => m.salaId === s.id).length}</button>`).join('')}</div>
       ${perm('ajustes') ? `<button class="btn sm ${ed ? 'pri' : ''}" data-act="editPlano">${ed ? 'Terminar edición' : 'Editar plano'}</button>${ed ? '<button class="btn sm" data-act="addMesa">+ Mesa</button>' : ''}` : ''}
       <div class="legend"><span><i style="background:#fff;border:2px solid #bfe5cc"></i>Libre</span><span><i style="background:var(--warn2);border:2px solid #f3c46e"></i>Ocupada</span><span><i style="background:var(--info2);border:2px solid #8fb6f3"></i>Precuenta</span></div>
     </div>
-    <div class="plano ${ed ? 'edit' : ''} ${grid ? 'grid' : ''}" id="plano">${mesas.map(mesaHTML).join('') || '<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">Esta sala no tiene mesas</div>'}</div>
+    <div class="plano ${ed ? 'edit' : ''} ${grid ? 'grid' : ''}" id="plano">${mesas.map(mesaHTML).join('') || `<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">${q ? 'Ninguna mesa coincide con la búsqueda' : 'Esta sala no tiene mesas'}</div>`}</div>
     ${ed ? `<p class="muted small" style="margin-top:8px">${grid ? 'Esta sala se muestra en cuadrícula. Toca una mesa para cambiarle el nombre o eliminarla. Para agregar varias usa Ajustes → Salas y mesas.' : 'Arrastra las mesas para ubicarlas (en computador o tablet). Toca una mesa para cambiarle el nombre, la forma o eliminarla.'}</p>` : ''}
   </div>`;
 }
@@ -1482,6 +1489,7 @@ function mesaHTML(m) {
   return `<div class="mesa ${cls} ${m.forma === 'redonda' ? 'redonda' : ''}" style="left:${m.x || 0}%;top:${m.y || 0}%" data-act="mesa" data-id="${m.id}">
     ${dr ? '<span class="dot" title="Tiene productos sin enviar"></span>' : ''}
     <div class="mn">${esc(m.nombre)}</div>
+    ${v && v.cliente && v.cliente.nombre ? `<div class="mc">${esc(v.cliente.nombre)}</div>` : ''}
     ${v ? `<div class="mt">${money(calc(v).total)}</div><div class="ms">${esc(first(v.meseroNombre) || '—')} · ${durTxt(v.abiertaEn)}</div>` : '<div class="ms">Libre</div>'}
   </div>`;
 }
@@ -1511,7 +1519,7 @@ function bindPlano() {
   });
 }
 
-A.sala = el => { S.salaId = el.dataset.id; render(); };
+A.sala = el => { S.salonQ = ''; S.salaId = el.dataset.id; render(); };
 A.editPlano = () => { S.editPlano = !S.editPlano; render(); };
 A.addMesa = () => {
   const ms = S.mesas.filter(m => m.salaId === S.salaId);
@@ -1560,6 +1568,7 @@ function modalAbrirMesa(m, v) {
   MODAL = { type: 'abrir', mesaId: m.id, ventaId: v ? v.id : null, personas: v ? (v.personas || 1) : 2 };
   const sel = v ? v.meseroId : defaultMesero();
   openModal(`${mHead((v ? 'Editar mesa ' : 'Abrir mesa ') + esc(m.nombre))}<div class="mb">
+    <div class="field"><label>Nombre del cliente (opcional)</label><input class="inp" id="am_cli" maxlength="40" autocomplete="off" autocapitalize="words" value="${esc((v && v.cliente && v.cliente.nombre) || '')}" placeholder="Ej: Carlos, la de la camisa roja…" data-enter="abrirMesa"></div>
     <div class="field"><label>Personas</label><div class="stepper"><button data-act="pers" data-d="-1">−</button><b id="pers">${MODAL.personas}</b><button data-act="pers" data-d="1">+</button></div></div>
     <div class="field"><label>Mesero</label><select class="inp" id="am_mes">${meserosOptions(sel)}</select></div>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri lg" data-act="abrirMesa" data-primary>${v ? 'Guardar' : 'Abrir mesa'}</button></div>`);
@@ -1567,12 +1576,19 @@ function modalAbrirMesa(m, v) {
 A.pers = el => { MODAL.personas = Math.max(1, MODAL.personas + parseInt(el.dataset.d, 10)); $('#pers').textContent = MODAL.personas; };
 A.abrirMesa = () => {
   const mid = $('#am_mes').value; const mu = S.usuarios.find(u => u.id === mid);
+  const cli = ($('#am_cli').value || '').trim().replace(/\s+/g, ' ');
   const info = { personas: MODAL.personas, meseroId: mid || null, meseroNombre: mu ? mu.nombre : '' };
-  if (MODAL.ventaId) { DB.update('ventas', MODAL.ventaId, info); closeModal(); return; }
+  if (MODAL.ventaId) {
+    const v = gVenta(MODAL.ventaId), antes = (v && v.cliente && v.cliente.nombre) || '';
+    DB.update('ventas', MODAL.ventaId, { ...info, cliente: cli ? { ...((v && v.cliente) || {}), nombre: cli } : null });
+    if (cli !== antes) logAct('mesa', `${cli ? 'Puso el cliente "' + cli + '" en' : 'Quitó el nombre del cliente de'} la mesa ${(gMesa(v && v.mesaId) || {}).nombre || ''}`, { ventaId: MODAL.ventaId });
+    closeModal(); return;
+  }
+  if (cli) info.cliente = { nombre: cli };
   const ex = ventaDeMesa(MODAL.mesaId);
   if (ex) { closeModal(); toast('Esa mesa ya fue abierta'); openPedido(ex.id); return; }
   const id = crearVenta({ tipo: 'mesa', mesaId: MODAL.mesaId, ...info });
-  logAct('mesa', `Abrió la mesa ${(gMesa(MODAL.mesaId) || {}).nombre || ''} (${info.personas} pers.${info.meseroNombre ? ', mesero ' + info.meseroNombre : ''})`, { ventaId: id });
+  logAct('mesa', `Abrió la mesa ${(gMesa(MODAL.mesaId) || {}).nombre || ''}${cli ? ' para ' + cli : ''} (${info.personas} pers.${info.meseroNombre ? ', mesero ' + info.meseroNombre : ''})`, { ventaId: id });
   closeModal(); openPedido(id);
 };
 
@@ -1603,7 +1619,10 @@ function vPedido() {
   const vacia = editable && !(v.items || []).some(i => i.estado !== 'anulado') && !draft.length;
   const lblCerrar = v.tipo === 'mesa' ? 'Cerrar mesa' : 'Cancelar pedido';
   const tags = [];
-  if (v.tipo === 'mesa') { tags.push(`<span class="tag">${v.personas || 0} pers.</span>`); if (v.meseroNombre) tags.push(`<span class="tag">${esc(v.meseroNombre)}</span>`); }
+  if (v.tipo === 'mesa') {
+    if (editable && !(v.cliente && v.cliente.nombre)) tags.push('<button class="tag" style="cursor:pointer;border:1px dashed var(--line)" data-act="editMesaInfo">+ Nombre del cliente</button>');
+    tags.push(`<span class="tag">${v.personas || 0} pers.</span>`); if (v.meseroNombre) tags.push(`<span class="tag">${esc(v.meseroNombre)}</span>`);
+  }
   else if (v.cliente && v.cliente.nombre) tags.push(`<span class="tag">${esc(v.cliente.nombre)}</span>`);
   if (editable) tags.push(`<span class="tag">${durTxt(v.abiertaEn)}</span>`);
   if (v.estado === 'cerrada') tags.push('<span class="tag ok">Pagada</span>');
@@ -1807,7 +1826,7 @@ A.masVenta = () => {
   const hasItems = (v.items || []).some(i => i.estado !== 'anulado') || (S.drafts[v.id] || []).length;
   MODAL = { type: 'mas' };
   const opts = [];
-  if (v.tipo === 'mesa') { opts.push('<button class="opt" data-act="cambiarMesa">Cambiar de mesa <span>›</span></button>'); opts.push('<button class="opt" data-act="editMesaInfo">Personas y mesero <span>›</span></button>'); }
+  if (v.tipo === 'mesa') { opts.push('<button class="opt" data-act="cambiarMesa">Cambiar de mesa <span>›</span></button>'); opts.push('<button class="opt" data-act="editMesaInfo">Nombre del cliente, personas y mesero <span>›</span></button>'); }
   else opts.push('<button class="opt" data-act="editCliente">Datos del cliente <span>›</span></button>');
   opts.push('<button class="opt" data-act="reimpComanda">Reimprimir última comanda <span>›</span></button>');
   if (!hasItems) opts.push(`<button class="opt bad" data-act="liberar">${v.tipo === 'mesa' ? 'Liberar mesa (sin consumo)' : 'Cancelar pedido'} <span>›</span></button>`);
@@ -2583,7 +2602,7 @@ function groupItems(items) {
 const tItems = items => groupItems(items).map(i => tl(`${i.cant} ${esc(i.nombre)}`, money(i.precio * i.cant)) + (i.nota ? `<div>&nbsp;&nbsp;* ${esc(i.nota)}</div>` : '')).join('');
 function tInfo(v, t) {
   const cl = v.cliente || {};
-  return `${tl('<b>' + esc(tituloVenta(v)) + '</b>', fechaHora(t || now()))}
+  return `${tl('<b>' + esc(tituloVenta(v, true)) + '</b>', fechaHora(t || now()))}
   ${v.tipo === 'mesa' ? tl('Mesero: ' + esc(v.meseroNombre || '—'), (v.personas || 0) + ' pers.') : ''}
   ${cl.nombre ? `<div>Cliente: ${esc(cl.nombre)}</div>` : ''}${cl.telefono ? `<div>Tel: ${esc(cl.telefono)}</div>` : ''}
   ${cl.direccion ? `<div>Dir: ${esc(cl.direccion)}${cl.referencia ? ' (' + esc(cl.referencia) + ')' : ''}</div>` : ''}${v.nota ? `<div>Nota: ${esc(v.nota)}</div>` : ''}`;
@@ -2695,7 +2714,7 @@ setInterval(() => {
   if (S.dayStart !== startOfDay()) { stopSubs(); startSubs(); return; }
   if (['salon', 'cocina', 'pedidos', 'pedido'].includes(S.view)) render();
 }, 30000);
-
+IN.salonQ = el => { S.salonQ = el.value; render(); };
 
 /* =====================================================================
    PANEL NEXORA — cobro mensual de licencias
