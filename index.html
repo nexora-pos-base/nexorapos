@@ -422,6 +422,9 @@ const num = n => Math.round(Number(n) || 0).toLocaleString('es-CO');
 const parseMoney = v => { const d = String(v ?? '').replace(/[^\d]/g, ''); return d ? parseInt(d, 10) : 0; };
 const now = () => Date.now();
 const startOfDay = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+/* jornada del negocio: de 6:00 a. m. a 6:00 a. m. Lo que se vende en la madrugada cuenta para la noche anterior */
+const HORA_CORTE = 6, CORTE_MS = HORA_CORTE * 3600000;
+const inicioJornada = (t = Date.now()) => startOfDay(t - CORTE_MS) + CORTE_MS;
 const hhmm = t => t ? new Date(t).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 const fecha = t => t ? new Date(t).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 const fechaHora = t => t ? fecha(t) + ' ' + hhmm(t) : '';
@@ -457,6 +460,8 @@ function licStatus(l, t = Date.now()) {
   return { k: dias <= 5 ? 'aviso' : 'aldia', dias, fin };
 }
 const dayInput = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const diaJornada = (t = Date.now()) => dayInput(t - CORTE_MS);
+const inicioDia = dia => new Date(dia + 'T00:00:00').getTime() + CORTE_MS;
 
 function toast(msg, type = '') {
   const t = document.createElement('div');
@@ -792,8 +797,8 @@ const S = {
   usuarios: [], salas: [], mesas: [], categorias: [], productos: [],
   ventasMap: {}, comandas: [], arqueo: null, movs: [], ventasCaja: [],
   drafts: {}, salaId: null, ventaId: null, catId: 'all', q: '', editPlano: false, showAcct: false,
-  ventasDia: dayInput(Date.now()), ventasDiaData: null, ajTab: 'negocio', prodCat: 'all', prodQ: '',
-  sound: true, dayStart: startOfDay(), arqueosHist: null, showEntregados: false,
+  ventasDia: diaJornada(Date.now()), ventasDiaData: null, ajTab: 'negocio', prodCat: 'all', prodQ: '',
+  sound: true, dayStart: inicioJornada(), arqueosHist: null, showEntregados: false,
   kiosk: false, acceso: undefined, usrLoaded: false,
 };
 let SUBS = [], CAJA_SUBS = [], CAJA_ID = null;
@@ -812,6 +817,7 @@ const rolName = r => r === 'cocina' ? (S.cfg.nombreCocina || 'Cocina') : (ROLES[
 const perm = k => {
   if (!S.user) return false;
   if (S.user.rol === 'admin') return true;
+  if (k === 'ventas' && S.user.verVentas) return true; // permiso especial de esa persona
   const v = (S.cfg?.permisos?.[S.user.rol] || {})[k];
   return !!(v ?? (DEFAULT_PERMS[S.user.rol] || {})[k]);
 };
@@ -1046,7 +1052,7 @@ function stopSubs() {
 
 function startSubs() {
   loadDrafts();
-  S.dayStart = startOfDay();
+  S.dayStart = inicioJornada();
   const loaded = {};
   const mark = k => { loaded[k] = true; if (S.screen === 'loading' && loaded.cfg && loaded.usuarios) enterAfterLoad(); };
   if (!S.user) S.screen = 'loading';
@@ -2217,18 +2223,18 @@ let LAST_VENTAS = [];
 function vVentas() {
   if (S.vTab === 'meseros') return vMeseros();
   if (S.vTab === 'actividad' && perm('actividad')) return vActividad();
-  const hoy = S.ventasDia === dayInput(now());
+  const hoy = S.ventasDia === diaJornada(now());
   let list;
   if (hoy) list = ventas().filter(v => (v.estado === 'cerrada' || v.estado === 'anulada') && (v.cerradaEn || 0) >= S.dayStart);
   else {
     if (!S.ventasDiaData || S.ventasDiaData.dia !== S.ventasDia) {
-      const dia = S.ventasDia, st = new Date(dia + 'T00:00:00').getTime(), en = st + 86400000;
+      const dia = S.ventasDia, st = inicioDia(dia), en = st + 86400000;
       S.ventasDiaData = { dia, list: null };
       DB.query('ventas', [['cerradaEn', '>=', st], ['cerradaEn', '<', en]]).then(l => { if (S.ventasDiaData && S.ventasDiaData.dia === dia) { S.ventasDiaData.list = l; render(); } }).catch(e => { console.error(e); toast('No se pudieron cargar las ventas', 'err'); });
     }
     list = S.ventasDiaData.list;
   }
-  const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${dayInput(now())}">`);
+  const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${diaJornada(now())}" title="Cada día va de 6:00 a. m. a 6:00 a. m. del día siguiente">`);
   if (!list) return head + '<div class="wrap">' + ventasTabs() + '<div class="card empty">Cargando ventas…</div></div>';
   list = list.slice().sort((a, b) => (b.cerradaEn || 0) - (a.cerradaEn || 0));
   LAST_VENTAS = list;
@@ -2248,6 +2254,7 @@ function vVentas() {
   const TN = { mesa: 'Mesas', mostrador: 'Mostrador', domicilio: 'Domicilios' };
   const listCard = (title, rows) => `<div class="card pad"><h3 class="sec-t">${title}</h3>${rows || '<p class="muted small">Sin datos</p>'}</div>`;
   return head + `<div class="wrap">${ventasTabs()}
+    <p class="muted small" style="margin:-6px 0 12px">Cada día va de 6:00 a. m. a 6:00 a. m.: lo que se vende en la madrugada cuenta para la noche anterior.</p>
     <div class="kpis">
       <div class="card kpi"><div class="l">Ventas</div><div class="v">${money(tot)}</div><div class="muted small">sin propinas</div></div>
       <div class="card kpi"><div class="l">Cuentas</div><div class="v">${ok.length}</div><div class="muted small">${anul.length} anuladas</div></div>
@@ -2420,7 +2427,7 @@ function vAjustes() {
     <p class="muted small" style="margin-top:12px">Para mover mesas, cambiarles el nombre o eliminarlas usa "Editar plano" en el Salón.</p></div>`;
   if (t === 'usuarios') body = `<div class="card" style="max-width:760px;overflow:auto"><div class="row between pad" style="padding-bottom:8px"><h3 class="sec-t" style="margin:0">Usuarios</h3><button class="btn sm pri" data-act="editUser">+ Usuario</button></div>
     <table class="tbl"><thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th></tr></thead><tbody>
-    ${S.usuarios.map(u => `<tr class="click" data-act="editUser" data-id="${u.id}"><td><div class="row">${avatar(u, 32)}<b>${esc(u.nombre)}</b></div></td><td>${rolName(u.rol)}</td><td>${u.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag">Inactivo</span>'}</td></tr>`).join('')}
+    ${S.usuarios.map(u => `<tr class="click" data-act="editUser" data-id="${u.id}"><td><div class="row">${avatar(u, 32)}<b>${esc(u.nombre)}</b>${u.verVentas && u.rol !== 'admin' ? ' <span class="tag info">Ve ventas</span>' : ''}</div></td><td>${rolName(u.rol)}</td><td>${u.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag">Inactivo</span>'}</td></tr>`).join('')}
     <tr><td><div class="row">${avatar(mantUser(), 32)}<b>Mantenimiento</b></div></td><td>Soporte NEXORA · acceso total</td><td><span class="tag">Fijo</span></td></tr>
     </tbody></table><p class="muted small pad">Cada persona entra con su usuario (su nombre) y su contraseña de 4 números. Todo lo que haga queda en el registro de actividad.</p></div>`;
   if (t === 'permisos') {
@@ -2559,6 +2566,7 @@ A.editUser = el => {
     <div class="field"><label>Contraseña (4 números)</label><input class="inp" id="us_p" inputmode="numeric" maxlength="4" placeholder="${u ? 'Vacío = no cambiar' : '4 números'}"></div></div>
     <p class="muted small">El usuario para entrar es el nombre, tal como lo escribas aquí.</p>
     <label class="chk"><input type="checkbox" id="us_a" ${!u || u.activo ? 'checked' : ''}> Activo</label>
+    <label class="chk" id="us_vv_w"><input type="checkbox" id="us_vv" ${u && u.verVentas ? 'checked' : ''}> Puede ver las ventas y los totales <span class="muted small">(solo esta persona, aunque su rol no lo tenga)</span></label>
   </div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button><button class="btn pri" data-act="saveUser" data-primary>Guardar</button></div>`);
 };
 A.saveUser = async () => {
@@ -2569,11 +2577,13 @@ A.saveUser = async () => {
   if ((!MODAL.id || p) && !/^\d{4}$/.test(p)) return toast('La contraseña debe tener 4 números', 'err');
   const otrosAdmin = S.usuarios.filter(u => u.id !== MODAL.id && u.rol === 'admin' && u.activo).length;
   if (MODAL.id && (r !== 'admin' || !a) && !otrosAdmin && (S.usuarios.find(u => u.id === MODAL.id) || {}).rol === 'admin') return toast('Debe quedar al menos un administrador activo', 'err');
-  const d = { nombre: n, rol: r, activo: a };
+  const vv = r !== 'admin' && $('#us_vv').checked;
+  const antesVV = !!(S.usuarios.find(u => u.id === MODAL.id) || {}).verVentas;
+  const d = { nombre: n, rol: r, activo: a, verVentas: vv };
   let id = MODAL.id;
   if (id) DB.update('usuarios', id, d); else id = DB.add('usuarios', { ...d, orden: S.usuarios.length + 1 });
   if (p) DB.set('pines', id, { pin: await hashPin(p, DB.nid) }, false);
-  logAct('ajustes', `${MODAL.id ? 'Editó' : 'Creó'} el usuario ${n} (${rolName(r)})${p ? ' · contraseña ' + (MODAL.id ? 'cambiada' : 'asignada') : ''}${!a ? ' · inactivo' : ''}`);
+  logAct('ajustes', `${MODAL.id ? 'Editó' : 'Creó'} el usuario ${n} (${rolName(r)})${p ? ' · contraseña ' + (MODAL.id ? 'cambiada' : 'asignada') : ''}${!a ? ' · inactivo' : ''}${vv !== antesVV ? (vv ? ' · ahora puede ver las ventas' : ' · ya no puede ver las ventas') : ''}`);
   closeModal(); toast('Usuario guardado', 'ok');
 };
 A.reiniciarNeg = () => {
@@ -2727,7 +2737,7 @@ document.addEventListener('keydown', e => {
 });
 setInterval(() => {
   if (S.screen !== 'app' || modalOpen()) return;
-  if (S.dayStart !== startOfDay()) { stopSubs(); startSubs(); return; }
+  if (S.dayStart !== inicioJornada()) { stopSubs(); startSubs(); return; }
   if (['salon', 'cocina', 'pedidos', 'pedido'].includes(S.view)) render();
 }, 30000);
 IN.salonQ = el => { S.salonQ = el.value; render(); };
@@ -3506,11 +3516,11 @@ A.vTab = el => { S.vTab = el.dataset.t; S.mData = null; S.aData = null; render()
 /* ---------- ranking de meseros ---------- */
 const PERIODOS = [['hoy', 'Hoy'], ['7d', 'Últimos 7 días'], ['mes', 'Este mes'], ['mesant', 'Mes anterior']];
 function rangoPeriodo(k) {
-  const d0 = startOfDay(), D = 864e5, n = new Date();
-  const ini = new Date(n.getFullYear(), n.getMonth(), 1).getTime();
+  const d0 = inicioJornada(), D = 864e5, n = new Date(Date.now() - CORTE_MS);
+  const ini = new Date(n.getFullYear(), n.getMonth(), 1).getTime() + CORTE_MS;
   if (k === '7d') return [d0 - 6 * D, d0 + D];
   if (k === 'mes') return [ini, d0 + D];
-  if (k === 'mesant') return [new Date(n.getFullYear(), n.getMonth() - 1, 1).getTime(), ini];
+  if (k === 'mesant') return [new Date(n.getFullYear(), n.getMonth() - 1, 1).getTime() + CORTE_MS, ini];
   return [d0, d0 + D];
 }
 function vMeseros() {
@@ -3555,9 +3565,9 @@ A.mPer = el => { S.mPer = el.dataset.p; render(); };
 /* ---------- registro de actividad ---------- */
 const ACT_LBL = { venta: ['ok', 'Venta'], anulacion: ['bad', 'Anulación'], descuento: ['warn', 'Descuento'], caja: ['info', 'Caja'], inventario: ['', 'Inventario'], pedido: ['', 'Pedido'], mesa: ['', 'Mesa'], sesion: ['', 'Sesión'], ajustes: ['warn', 'Ajustes'] };
 function vActividad() {
-  const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${dayInput(now())}">`);
+  const head = topHTML('Ventas', `<input type="date" class="inp" style="width:auto;min-height:38px" data-ch="vdia" value="${S.ventasDia}" max="${diaJornada(now())}">`);
   if (!S.aData || S.aData.dia !== S.ventasDia) {
-    const dia = S.ventasDia, st = new Date(dia + 'T00:00:00').getTime();
+    const dia = S.ventasDia, st = inicioDia(dia);
     S.aData = { dia, list: null };
     DB.query('actividad', [['fecha', '>=', st], ['fecha', '<', st + 864e5]]).then(l => { if (S.aData && S.aData.dia === dia) { S.aData.list = l.sort((a, b) => b.fecha - a.fecha); render(); } }).catch(e => { console.error(e); toast('No se pudo cargar el registro', 'err'); });
   }
