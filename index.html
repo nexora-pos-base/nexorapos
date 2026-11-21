@@ -364,6 +364,7 @@ a.btn{text-decoration:none}
 .mesa .mc{font-size:12.5px;font-weight:700;color:var(--ink2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
 .salon-q{width:220px;min-height:38px;padding:6px 12px}
 @media (max-width:640px){.salon-q{width:100%}}
+.vcaja:not(.ok):not(.bad){background:var(--bg);color:var(--ink2)}
 
 </style>
 </head>
@@ -1876,10 +1877,23 @@ A.reimpComanda = () => {
 
 /* ===================== cobrar ===================== */
 let PAY = null;
+/* la caja no es obligatoria: si nadie la abrió, se abre sola (base $0) con el primer cobro.
+   Solo se exige abrirla antes si el administrador lo activa en Ajustes → Pagos e impuestos. */
+const cajaObligatoria = () => !!S.cfg.cajaObligatoria;
+function asegurarCaja() {
+  if (S.arqueo) return S.arqueo.id;
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const id = `auto-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; // mismo id si dos celulares cobran a la vez
+  const a = { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base: 0, automatica: true };
+  DB.set('arqueos', id, a);
+  if (!S.arqueo) S.arqueo = { id, ...a };
+  logAct('caja', 'La caja se abrió sola con el primer cobro (base $0)');
+  return id;
+}
 A.cobrar = () => {
   const v = gVenta(S.ventaId); if (!v) return;
   if (!canCobrar(v)) return toast('Solo puedes cobrar tus propias mesas', 'err');
-  if (!S.arqueo) {
+  if (!S.arqueo && cajaObligatoria()) {
     MODAL = { type: 'cajaCerrada' };
     openModal(`${mHead('La caja está cerrada')}<div class="mb"><p>Para cobrar primero hay que abrir la caja del turno.</p></div><div class="mf"><button class="btn" data-act="closeModal">Cancelar</button>${perm('caja') ? '<button class="btn pri" data-act="irCaja" data-primary>Ir a Caja</button>' : '<span class="muted small" style="align-self:center">Pide al cajero o al administrador que abra la caja.</span>'}</div>`);
     return;
@@ -1964,7 +1978,7 @@ A.payConfirm = () => {
   const c = PAY.c;
   const patch = {
     estado: 'cerrada', cerradaEn: now(), cerradaPor: S.user.nombre, pagos: pagos.filter(p => p.monto > 0 || p.recibido), cambio,
-    subtotal: c.subtotal, descuentoValor: c.desc, envio: c.envio, propina, total: c.total, arqueoId: S.arqueo.id,
+    subtotal: c.subtotal, descuentoValor: c.desc, envio: c.envio, propina, total: c.total, arqueoId: asegurarCaja(),
   };
   DB.update('ventas', v.id, patch);
   logAct('venta', `Cobró ${tituloVenta(v)} · ${money(c.total + propina)} · ${patch.pagos.map(p => p.medio).join(' + ')}${v.meseroNombre && v.meseroNombre !== S.user.nombre ? ' · mesero ' + v.meseroNombre : ''}`, { ventaId: v.id, monto: c.total + propina });
@@ -2101,7 +2115,7 @@ function vCaja() {
   if (!S.arqueo) {
     return topHTML('Caja', '<span class="tag bad">Cerrada</span>') + `<div class="wrap">
       <div class="card pad" style="max-width:480px">
-        <h3 class="sec-t">Abrir la caja del turno</h3><p class="muted small" style="margin-bottom:12px">Cuenta el efectivo con el que arranca el turno (la base) y escríbelo aquí. Después vende desde <b>Vender</b>.</p>
+        <h3 class="sec-t">Abrir la caja del turno</h3><p class="muted small" style="margin-bottom:12px">Cuenta el efectivo con el que arranca el turno (la base) y escríbelo aquí. Después vende desde <b>Vender</b>.${cajaObligatoria() ? '' : ' Si nadie la abre, la caja se abre sola con la primera venta (con base $0).'}</p>
         <div class="field"><label>Base en efectivo</label><input class="inp money" id="cj_base" data-keep inputmode="numeric" placeholder="$ 0"></div>
         ${perm('caja') ? '<button class="btn pri lg block" data-act="abrirCaja">Abrir caja</button>' : '<p class="muted">No tienes permiso para abrir la caja.</p>'}
       </div>${histHTML}</div>`;
@@ -2425,6 +2439,8 @@ function vAjustes() {
       <div class="field"><label>Porcentaje</label><input class="inp" id="aj_impp" data-keep inputmode="decimal" value="${esc(c.impuestoPct ?? 8)}"></div></div>
       <label class="chk"><input type="checkbox" id="aj_impm" ${c.mostrarImpuesto ? 'checked' : ''}> Mostrar el impuesto discriminado en los tiquetes</label>
       <p class="muted small" style="margin:6px 0 12px">Los precios de los productos ya incluyen el impuesto. Usa 0 si el negocio no es responsable de impoconsumo.</p>
+      <label class="chk"><input type="checkbox" id="aj_cajao" ${c.cajaObligatoria ? 'checked' : ''}> Exigir abrir la caja antes de cobrar</label>
+      <p class="muted small" style="margin:2px 0 12px">Si está apagado, se puede cobrar siempre: la caja se abre sola con la primera venta.</p>
       <button class="btn pri" data-act="savePagos">Guardar</button></div></div>`;
   if (t === 'sistema') body = licCardHTML() + `<div class="card pad" style="max-width:640px">
     <div class="list-row"><span>Modo</span><b>${DB.mode === 'local' ? 'Demo (datos en este navegador)' : 'Nube (Firebase)'}</b></div>
@@ -2468,7 +2484,7 @@ A.saveNegocio = () => {
 };
 A.savePagos = () => {
   const p = parseFloat(String($('#aj_prop').value).replace(',', '.')) || 0, ip = parseFloat(String($('#aj_impp').value).replace(',', '.')) || 0;
-  DB.update('config', 'general', { propinaPct: p, impuestoNombre: $('#aj_impn').value.trim() || 'Impuesto', impuestoPct: ip, mostrarImpuesto: $('#aj_impm').checked });
+  DB.update('config', 'general', { propinaPct: p, impuestoNombre: $('#aj_impn').value.trim() || 'Impuesto', impuestoPct: ip, mostrarImpuesto: $('#aj_impm').checked, cajaObligatoria: $('#aj_cajao').checked });
   toast('Guardado', 'ok');
 };
 A.addMedio = () => {
@@ -3356,7 +3372,7 @@ const prefPrint = () => localStorage.getItem('nexorapos_print') === '1';
 function vVender() {
   if (cartLoadedFor !== DB.nid) { loadCart(); cartLoadedFor = DB.nid; }
   const cart = S.cart, total = sum(cart, i => i.precio * i.cant), n = sum(cart, i => i.cant);
-  const abierta = !!S.arqueo;
+  const abierta = !!S.arqueo, puedeCobrar = abierta || !cajaObligatoria();
   const vend = S.ventasCaja.filter(v => v.estado === 'cerrada');
   const qn = norm(S.vQ);
   const prods = S.productos.filter(p => p.activo !== false && (S.vCat === 'all' || p.categoriaId === S.vCat) && (!qn || norm(p.nombre).includes(qn)));
@@ -3368,6 +3384,8 @@ function vVender() {
   </div>`;
   const caja = abierta
     ? `<div class="vcaja ok"><span>Caja abierta · ${vend.length} ${vend.length === 1 ? 'venta' : 'ventas'} · <b>${money(sum(vend, v => (v.total || 0) + (v.propina || 0)))}</b></span>${perm('caja') ? '<button class="lnk" data-act="nav" data-v="caja">Ver caja</button>' : ''}</div>`
+    : !cajaObligatoria() ? (perm('caja') ? `<div class="vcaja"><span class="small">Caja sin abrir: se abre sola con la primera venta. Si quieres registrar la base del turno:</span>
+        <div class="row" style="margin-top:6px"><input class="inp money" id="vd_base" data-keep inputmode="numeric" placeholder="Base $" style="min-height:38px"><button class="btn sm" data-act="vdAbrirCaja">Abrir con base</button></div></div>` : '')
     : (perm('caja') ? `<div class="vcaja bad"><b>La caja está cerrada</b><div class="small" style="margin:4px 0 8px">Para empezar a vender, escribe la base en efectivo del turno y abre la caja.</div>
         <div class="row"><input class="inp money" id="vd_base" data-keep inputmode="numeric" placeholder="Base $" style="min-height:40px"><button class="btn pri" data-act="vdAbrirCaja">Abrir caja</button></div></div>`
       : '<div class="vcaja bad"><b>La caja está cerrada.</b> Pide al cajero o al administrador que la abra.</div>');
@@ -3379,8 +3397,8 @@ function vVender() {
         <div class="p" style="min-width:74px;text-align:right">${money(i.precio * i.cant)}</div></div>`).join('') : '<div class="empty">Toca los productos para agregarlos a la venta</div>'}</div>
     <div class="acct-f">
       <div class="tot big"><span>Total${n ? ` · ${n} und` : ''}</span><span>${money(total)}</span></div>
-      <div class="medbtns">${medios().map(m => `<button class="btn ${m === 'Efectivo' ? 'ok' : ''} lg" data-act="vCobrar" data-m="${esc(m)}" ${cart.length && abierta ? '' : 'disabled'}>${esc(m)}</button>`).join('')}</div>
-      <div class="acts" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="vCobrar" data-m="" ${cart.length && abierta ? '' : 'disabled'}>Pago mixto</button><button class="btn" data-act="vMesa" ${cart.length && perm('salon') ? '' : 'disabled'}>Pasar a una mesa</button></div>
+      <div class="medbtns">${medios().map(m => `<button class="btn ${m === 'Efectivo' ? 'ok' : ''} lg" data-act="vCobrar" data-m="${esc(m)}" ${cart.length && puedeCobrar ? '' : 'disabled'}>${esc(m)}</button>`).join('')}</div>
+      <div class="acts" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="vCobrar" data-m="" ${cart.length && puedeCobrar ? '' : 'disabled'}>Pago mixto</button><button class="btn" data-act="vMesa" ${cart.length && perm('salon') ? '' : 'disabled'}>Pasar a una mesa</button></div>
     </div></div>`;
   return topHTML('Vender') + `<div class="mtabs"><button class="${!S.vShowCart ? 'on' : ''}" data-act="vShow" data-v="0">Productos</button><button class="${S.vShowCart ? 'on' : ''}" data-act="vShow" data-v="1">Venta · ${money(total)}${n ? ` <span class="tag warn">${n}</span>` : ''}</button></div>
     <div class="pv ${S.vShowCart ? 'show-acct' : ''}">${left}${right}</div>`;
@@ -3423,7 +3441,7 @@ A.vdAbrirCaja = () => {
 };
 A.vCobrar = el => {
   if (!S.cart.length) return;
-  if (!S.arqueo) return toast('Primero abre la caja', 'err');
+  if (!S.arqueo && cajaObligatoria()) return toast('Primero abre la caja', 'err');
   const total = sum(S.cart, i => i.precio * i.cant);
   const m = el.dataset.m;
   PAY = { cart: true, c: { subtotal: total, desc: 0, envio: 0, total, propSug: 0 }, propinaOn: false, propina: 0, pagos: m ? [{ medio: m, monto: total }] : [], imprimir: prefPrint() };
@@ -3433,7 +3451,8 @@ A.vCobrar = el => {
   setTimeout(() => { const inp = $('#pay_r0'); if (inp && m === 'Efectivo') { inp.focus(); inp.select(); } else { const b = $('#pay_ok'); if (b) b.focus(); } }, 60);
 };
 function vFinalizar(st) {
-  const cart = S.cart; if (!cart.length || !S.arqueo) return;
+  const cart = S.cart; if (!cart.length) return;
+  const arqueoId = asegurarCaja();
   const t = now(), cambio = st.cambio || 0;
   const pagos = PAY.pagos.map(p => ({ ...p }));
   if (cambio > 0) { const ef = pagos.find(p => p.medio === 'Efectivo'); ef.recibido = ef.monto; ef.monto -= cambio; }
@@ -3443,7 +3462,7 @@ function vFinalizar(st) {
   const v = {
     tipo: 'mostrador', rapida: true, numero, mesaId: null, personas: 0, meseroId: S.user.id, meseroNombre: S.user.nombre, cliente: null, envio: 0, nota: '',
     items, descuento: null, estado: 'cerrada', etapa: 'entregado', precuentaEn: null, abiertaEn: t, abiertaPor: S.user.nombre, cerradaEn: t, cerradaPor: S.user.nombre,
-    pagos: pagos.filter(p => p.monto > 0 || p.recibido), cambio, subtotal, descuentoValor: 0, propina, total: subtotal, arqueoId: S.arqueo.id,
+    pagos: pagos.filter(p => p.monto > 0 || p.recibido), cambio, subtotal, descuentoValor: 0, propina, total: subtotal, arqueoId,
   };
   const id = DB.add('ventas', v);
   moverStock(items, -1);
