@@ -428,6 +428,8 @@ const inicioJornada = (t = Date.now()) => startOfDay(t - CORTE_MS) + CORTE_MS;
 const hhmm = t => t ? new Date(t).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 const fecha = t => t ? new Date(t).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 const fechaHora = t => t ? fecha(t) + ' ' + hhmm(t) : '';
+/* noche a la que pertenece una hora (de 6 a.m. a 6 a.m.): la 1 a.m. del 22 es "la noche del 21" */
+const fechaNoche = (t, largo) => t ? new Date(new Date(t).getTime() - 6 * 3600000).toLocaleDateString('es-CO', largo ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' }) : '';
 const mins = t => Math.max(0, Math.floor((Date.now() - t) / 60000));
 const durTxt = t => { const m = mins(t); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -1886,11 +1888,26 @@ let PAY = null;
 /* la caja no es obligatoria: si nadie la abrió, se abre sola (base $0) con el primer cobro.
    Solo se exige abrirla antes si el administrador lo activa en Ajustes → Pagos e impuestos. */
 const cajaObligatoria = () => !!S.cfg.cajaObligatoria;
+const nocheDeCaja = a => a ? (a.jornada || diaJornada(a.abiertoEn)) : '';
+/* si quedó abierta la caja de una noche anterior, se cierra sola (sin conteo) para que cada noche quede aparte */
+function cerrarCajaVieja() {
+  const a = S.arqueo; if (!a || nocheDeCaja(a) === diaJornada(now())) return;
+  const k = cajaCalc();
+  DB.update('arqueos', a.id, {
+    estado: 'cerrado', cerradoEn: now(), cerradoPor: 'Automático', cierreAutomatico: true, jornada: nocheDeCaja(a),
+    sistema: k.sistema, contado: null, diferencia: null, ventasTotal: k.ventasTotal, propinas: k.propinas, cuentas: k.vs.length,
+    ingresos: k.ingresos, egresos: k.egresos, porMedio: k.porMedio, notas: 'Se cerró sola al empezar la noche siguiente (sin conteo de dinero)',
+  });
+  logAct('caja', `La caja de la noche del ${fechaNoche(a.abiertoEn)} quedó abierta y se cerró sola · vendido ${money(k.ventasTotal)}`);
+  S.cajaCerradaId = a.id; S.arqueo = null;
+}
 function asegurarCaja() {
+  cerrarCajaVieja();
   if (S.arqueo) return S.arqueo.id;
   const d = new Date(), p = n => String(n).padStart(2, '0');
-  const id = `auto-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; // mismo id si dos celulares cobran a la vez
-  const a = { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base: 0, automatica: true };
+  let id = `auto-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; // mismo id si dos celulares cobran a la vez
+  if (id === S.cajaCerradaId) id += '-2'; // no reabrir una caja que se acaba de cerrar en este mismo minuto
+  const a = { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base: 0, automatica: true, jornada: diaJornada(now()) };
   DB.set('arqueos', id, a);
   if (!S.arqueo) S.arqueo = { id, ...a };
   logAct('caja', 'La caja se abrió sola con el primer cobro (base $0)');
@@ -2115,8 +2132,8 @@ function vCaja() {
     DB.query('arqueos', [['estado', '==', 'cerrado']]).then(l => { S.arqueosHist = l.sort((a, b) => b.abiertoEn - a.abiertoEn).slice(0, 15); render(); }).catch(() => { S.arqueosHist = []; render(); });
   }
   const hist = Array.isArray(S.arqueosHist) ? S.arqueosHist : [];
-  const histHTML = `<h3 class="sec-t" style="margin-top:22px">Cierres anteriores</h3><div class="card" style="overflow:auto">${hist.length ? `<table class="tbl"><thead><tr><th>Apertura</th><th>Cierre</th><th>Responsable</th><th class="num">Ventas</th><th class="num">Diferencia</th></tr></thead><tbody>
-    ${hist.map(h => `<tr class="click" data-act="verArqueo" data-id="${h.id}"><td>${fechaHora(h.abiertoEn)}</td><td>${fechaHora(h.cerradoEn)}</td><td>${esc(h.cerradoPor || h.abiertoPor || '')}</td><td class="num">${money(h.ventasTotal)}</td><td class="num" style="color:${(h.diferencia || 0) < 0 ? 'var(--bad)' : (h.diferencia || 0) > 0 ? 'var(--ok)' : 'inherit'};font-weight:700">${money(h.diferencia)}</td></tr>`).join('')}</tbody></table>` : `<div class="empty">${S.arqueosHist === 'loading' ? 'Cargando…' : 'Todavía no hay cierres de caja'}</div>`}</div>`;
+  const histHTML = `<h3 class="sec-t" style="margin-top:22px">Cierres anteriores</h3><div class="card" style="overflow:auto">${hist.length ? `<table class="tbl"><thead><tr><th>Noche</th><th>Apertura</th><th>Cierre</th><th>Responsable</th><th class="num">Ventas</th><th class="num">Diferencia</th></tr></thead><tbody>
+    ${hist.map(h => `<tr class="click" data-act="verArqueo" data-id="${h.id}"><td><b>${esc(fechaNoche(h.abiertoEn))}</b></td><td>${fechaHora(h.abiertoEn)}</td><td>${fechaHora(h.cerradoEn)}</td><td>${esc(h.cerradoPor || h.abiertoPor || '')}</td><td class="num">${money(h.ventasTotal)}</td><td class="num" style="color:${(h.diferencia || 0) < 0 ? 'var(--bad)' : (h.diferencia || 0) > 0 ? 'var(--ok)' : 'inherit'};font-weight:700">${h.cierreAutomatico ? '<span class="muted small" style="font-weight:600">Se cerró sola</span>' : money(h.diferencia)}</td></tr>`).join('')}</tbody></table>` : `<div class="empty">${S.arqueosHist === 'loading' ? 'Cargando…' : 'Todavía no hay cierres de caja'}</div>`}</div>`;
 
   if (!S.arqueo) {
     return topHTML('Caja', '<span class="tag bad">Cerrada</span>') + `<div class="wrap">
@@ -2133,7 +2150,7 @@ function vCaja() {
   const salidas = S.movs.filter(m => m.tipo === 'egreso'), entradas = S.movs.filter(m => m.tipo === 'ingreso');
   const vs = k.vs.slice().sort((x, y) => (y.cerradaEn || 0) - (x.cerradaEn || 0));
   const resumen = v => { const t = (v.items || []).filter(i => i.estado !== 'anulado').map(i => i.cant + ' ' + i.nombre).join(', '); return t.length > 60 ? t.slice(0, 58) + '…' : t; };
-  return topHTML('Caja', `<span class="tag ok">Abierta desde ${hhmm(a.abiertoEn)}</span>`) + `<div class="wrap">
+  return topHTML('Caja', `<span class="tag ok">Noche del ${esc(fechaNoche(a.abiertoEn))} · abierta desde ${hhmm(a.abiertoEn)}</span>`) + `<div class="wrap">
     <div class="row wrap" style="margin-bottom:16px">
       ${canView('vender') ? '<button class="btn pri lg" data-act="nav" data-v="vender">Ir a vender</button>' : ''}
       ${perm('caja') ? '<button class="btn lg" data-act="mov" data-t="egreso">Salida de dinero</button><button class="btn lg" data-act="mov" data-t="ingreso">Entrada de dinero</button><div style="flex:1"></div><button class="btn bad lg" data-act="cerrarCaja">Cerrar caja</button>' : ''}
@@ -2143,7 +2160,8 @@ function vCaja() {
       <div class="card kpi"><div class="l">Debe haber en efectivo</div><div class="v">${money(k.sistema.Efectivo)}</div><div class="muted small">base ${money(a.base)} + ventas ${money(k.porMedio.Efectivo || 0)}${k.movM.Efectivo ? (k.movM.Efectivo > 0 ? ' + entradas ' : ' − salidas ') + money(Math.abs(k.movM.Efectivo)) : ''}</div></div>
       <div class="card kpi"><div class="l">Pagos electrónicos</div><div class="v">${money(totElec)}</div><div class="muted small">${electro.filter(m => k.sistema[m]).map(m => esc(m) + ' ' + money(k.sistema[m])).join(' · ') || 'Nequi, tarjeta, transferencias…'}</div></div>
     </div>
-    ${abiertas ? `<div class="lic-bar warn" style="border-radius:12px;margin-bottom:16px;text-align:left">Hay ${abiertas} ${abiertas === 1 ? 'cuenta abierta' : 'cuentas abiertas'} sin cobrar (mesas o pedidos). Cóbralas antes de cerrar la caja.</div>` : ''}
+    ${nocheDeCaja(a) !== diaJornada(now()) ? `<div class="lic-bar bad" style="border-radius:12px;margin-bottom:16px;text-align:left">Esta caja es de la <b>noche del ${esc(fechaNoche(a.abiertoEn))}</b> y quedó abierta. Ciérrala ahora con el conteo; si no, se cierra sola con la primera venta de esta noche.</div>` : ''}
+    ${abiertas ? `<div class="lic-bar warn" style="border-radius:12px;margin-bottom:16px;text-align:left">Hay ${abiertas} ${abiertas === 1 ? 'cuenta abierta' : 'cuentas abiertas'} sin cobrar (mesas o pedidos). Lo ideal es cobrarlas antes de cerrar; si cierras igual, pasan al próximo turno.</div>` : ''}
     <div class="grid2" style="align-items:start;grid-template-columns:2fr 1fr">
       <div class="card" style="overflow:auto"><div class="pad" style="padding-bottom:4px"><h3 class="sec-t" style="margin:0">Ventas de este turno</h3></div>
         ${vs.length ? `<table class="tbl"><thead><tr><th>Hora</th><th>Venta</th><th>Productos</th><th>Pago</th><th class="num">Total</th></tr></thead><tbody>
@@ -2160,7 +2178,7 @@ function vCaja() {
 A.abrirCaja = () => {
   if (S.arqueo) return;
   let base = parseMoney($('#cj_base').value); if (base > 0 && base < 1000) base *= 1000;
-  DB.add('arqueos', { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base });
+  DB.add('arqueos', { estado: 'abierto', abiertoEn: now(), abiertoPor: S.user.nombre, base, jornada: diaJornada(now()) });
   logAct('caja', `Abrió la caja con base de ${money(base)}`);
   $('#cj_base').value = ''; toast('Caja abierta', 'ok');
 };
@@ -2184,7 +2202,7 @@ A.delMov = el => { const mv = S.movs.find(x => x.id === el.dataset.id); confirmB
 A.cerrarCaja = () => {
   const k = cajaCalc(); const ab = ventasAbiertas().length;
   MODAL = { type: 'cierre', k };
-  openModal(`${mHead('Cerrar caja')}<div class="mb">
+  openModal(`${mHead('Cerrar caja · noche del ' + esc(fechaNoche(S.arqueo.abiertoEn)))}<div class="mb">
     ${ab ? `<p class="tag warn" style="margin-bottom:10px;white-space:normal">Hay ${ab} cuenta(s) abierta(s) sin cobrar. Se cobrarán en el próximo turno.</p>` : ''}
     <p class="muted small" style="margin-bottom:10px">Cuenta lo que hay realmente en cada medio y escríbelo en "Contado".</p>
     <table class="tbl"><thead><tr><th>Medio</th><th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferencia</th></tr></thead><tbody>
@@ -2202,17 +2220,18 @@ function ccDiff(i) {
   out.textContent = (d > 0 ? '+ ' : d < 0 ? '− ' : '') + money(Math.abs(d)); out.style.color = d < 0 ? 'var(--bad)' : d > 0 ? 'var(--ok)' : '';
 }
 A.confCierre = () => {
+  const arq = S.arqueo; if (!arq) return closeModal();
   const k = MODAL.k; const contado = {}; let falta = false;
   k.ms.forEach((m, i) => { const v = $('#cc_' + i).value; if (v === '') falta = true; contado[m] = parseMoney(v); });
   if (falta) return toast('Escribe lo contado en todos los medios (usa 0 si no hay)', 'err');
   const dif = sum(Object.values(contado)) - sum(Object.values(k.sistema));
   const data = {
-    estado: 'cerrado', cerradoEn: now(), cerradoPor: S.user.nombre, sistema: k.sistema, contado, diferencia: dif,
+    estado: 'cerrado', cerradoEn: now(), cerradoPor: S.user.nombre, jornada: arq.jornada || diaJornada(arq.abiertoEn), sistema: k.sistema, contado, diferencia: dif,
     ventasTotal: k.ventasTotal, propinas: k.propinas, cuentas: k.vs.length, ingresos: k.ingresos, egresos: k.egresos, porMedio: k.porMedio, notas: $('#cc_n').value.trim(),
   };
-  const pr = $('#cc_pr').checked; const a = { ...S.arqueo, ...data };
-  DB.update('arqueos', S.arqueo.id, data);
-  logAct('caja', `Cerró la caja · vendido ${money(data.ventasTotal)} · diferencia ${money(dif)}`, { monto: dif });
+  const pr = $('#cc_pr').checked; const a = { ...arq, ...data };
+  S.cajaCerradaId = arq.id; DB.update('arqueos', arq.id, data);
+  logAct('caja', `Cerró la caja de la noche del ${fechaNoche(arq.abiertoEn)} · vendido ${money(data.ventasTotal)} · diferencia ${money(dif)}`, { monto: dif });
   closeModal(); toast('Caja cerrada', 'ok'); S.arqueosHist = null;
   if (pr) printCierre(a);
 };
@@ -2665,13 +2684,13 @@ function printComanda(v, items, anul = false) {
 }
 function printCierre(a) {
   const ms = Object.keys(a.sistema || {});
-  printHTML(`${tHead()}<div class="c b l">CIERRE DE CAJA</div>
+  printHTML(`${tHead()}<div class="c b l">CIERRE DE CAJA</div><div class="c b">Noche del ${esc(fechaNoche(a.abiertoEn, true))}</div>
     ${tl('Apertura', fechaHora(a.abiertoEn))}${tl('Cierre', fechaHora(a.cerradoEn))}${tl('Abrió', esc(a.abiertoPor || ''))}${tl('Cerró', esc(a.cerradoPor || ''))}<hr>
     ${tl('Base inicial', money(a.base))}${tl('Ventas (' + (a.cuentas || 0) + ' cuentas)', money(a.ventasTotal))}${tl('Propinas', money(a.propinas))}
     ${tl('Ingresos', money(a.ingresos))}${tl('Egresos', '- ' + money(a.egresos))}<hr>
     <div class="r b"><span>Medio</span><span>Sistema / Contado</span></div>
-    ${ms.map(m => tl(esc(m), money(a.sistema[m]) + ' / ' + money((a.contado || {})[m]))).join('')}<hr>
-    ${tl('DIFERENCIA', money(a.diferencia), 'b l')}${a.notas ? `<div>Obs: ${esc(a.notas)}</div>` : ''}<br><br><div class="c">_______________________</div><div class="c">Firma</div>`);
+    ${ms.map(m => tl(esc(m), money(a.sistema[m]) + (a.cierreAutomatico ? '' : ' / ' + money((a.contado || {})[m])))).join('')}<hr>
+    ${a.cierreAutomatico ? '<div class="c b">Cierre automático: no se contó el dinero</div>' : tl('DIFERENCIA', money(a.diferencia), 'b l')}${a.notas ? `<div>Obs: ${esc(a.notas)}</div>` : ''}<br><br><div class="c">_______________________</div><div class="c">Firma</div>`);
 }
 
 /* ===================== eventos ===================== */
